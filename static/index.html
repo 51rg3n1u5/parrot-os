@@ -6,29 +6,29 @@
     <title>ParrotOS</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: sans-serif; background: #1a1a2e; color: #eee; overflow: hidden; touch-action: manipulation; }
+        body { font-family: sans-serif; background: #1a1a2e; color: #eee; overflow: hidden; }
         #menu { position: fixed; top: 0; left: 0; right: 0; height: 60px; background: #16213e; display: flex; border-bottom: 3px solid #e94560; z-index: 100; }
         .menu-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border: none; background: transparent; color: #aaa; font-size: 14px; cursor: pointer; }
         .menu-btn.active { color: #fff; background: rgba(233, 69, 96, 0.2); }
-        #status { position: fixed; top: 60px; left: 0; right: 0; height: 35px; background: #0f3460; display: flex; align-items: center; justify-content: space-around; font-size: 13px; z-index: 100; }
+        #status { position: fixed; top: 60px; left: 0; right: 0; height: 35px; background: #0f3460; display: flex; align-items: center; justify-content: space-around; font-size: 13px; }
         .val { color: #4ecca3; font-weight: bold; }
         #content { position: fixed; top: 95px; left: 0; right: 0; bottom: 0; }
-        .page { display: none; width: 100%; height: 100%; }
+        .page { display: none; }
         .page.active { display: block; }
         #game { background: #0d1b2a; position: relative; overflow: hidden; }
-        .tgt { position: absolute; width: 90px; height: 90px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 48px; cursor: pointer; user-select: none; -webkit-user-select: none; }
+        #game-score { position: absolute; top: 15px; left: 15px; font-size: 28px; color: #4ecca3; font-weight: bold; z-index: 50; }
+        .tgt { position: absolute; width: 90px; height: 90px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 48px; cursor: pointer; }
         .tgt:active { transform: scale(0.85); }
-        .food { background: linear-gradient(#f39c12, #e74c3c); box-shadow: 0 4px 20px rgba(243, 156, 18, 0.5); }
-        .toy { background: linear-gradient(#9b59b6, #3498db); box-shadow: 0 4px 20px rgba(155, 89, 182, 0.5); }
-        .fruit { background: linear-gradient(#2ecc71, #27ae60); box-shadow: 0 4px 20px rgba(46, 204, 113, 0.5); }
-        #calm { background: linear-gradient(#0d1b2a, #1b263b); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .food { background: linear-gradient(#f39c12, #e74c3c); }
+        .toy { background: linear-gradient(#9b59b6, #3498db); }
+        .fruit { background: linear-gradient(#2ecc71, #27ae60); }
+        #calm { display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(#0d1b2a, #1b263b); }
         .brth { width: 150px; height: 150px; border-radius: 50%; background: radial-gradient(#415a77, #1b263b); animation: b 4s ease-in-out infinite; }
-        @keyframes b { 0%,100% { transform: scale(1); opacity: 0.6; } 50% { transform: scale(1.4); opacity: 1; } }
-        #admin { padding: 20px; overflow-y: auto; }
+        @keyframes b { 0%,100% { transform: scale(1); } 50% { transform: scale(1.4); } }
+        #admin { padding: 20px; }
         .sec { background: #16213e; padding: 15px; border-radius: 8px; margin-bottom: 10px; }
-        .btn { padding: 12px 24px; background: #4ecca3; color: #1a1a2e; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin: 5px; font-size: 16px; }
+        .btn { padding: 12px 24px; background: #4ecca3; color: #1a1a2e; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin: 5px; }
         #home { display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(#1a1a2e, #16213e); }
-        #home h1 { font-size: 56px; }
     </style>
 </head>
 <body>
@@ -39,66 +39,82 @@
         <button class="menu-btn" data-p="admin">⚙️<div>Admin</div></button>
     </nav>
     <div id="status">
-        <span>Mat: <span class="val" id="pellets">0/40g</span></span>
-        <span>Bonus: <span class="val" id="bonus">0g</span></span>
+        <span>Mat: <span class="val" id="pellets">--</span></span>
+        <span>Bonus: <span class="val" id="bonus">--</span></span>
         <span>Poäng: <span class="val" id="score">0</span></span>
     </div>
     <div id="content">
-        <div id="home" class="page active"><h1>🦜 ParrotOS</h1><p style="color:#888;font-size:20px">Tryck på Lek för att börja</p></div>
-        <div id="game" class="page"></div>
+        <div id="home" class="page active"><h1>🦜 ParrotOS</h1><p style="color:#888;font-size:20px">Tryck på Lek</p></div>
+        <div id="game" class="page"><div id="game-score">Poäng: <span id="pts">0</span></div></div>
         <div id="calm" class="page"><div class="brth"></div><p style="margin-top:30px;color:#778da9;font-size:24px">Shh... lugnt nu</p></div>
         <div id="admin" class="page">
             <h2 style="color:#4ecca3;margin-bottom:15px">Admin</h2>
-            <div class="sec"><h3>Utfodring</h3><p style="margin:10px 0">Mat idag: <span id="admin-p" class="val">0g</span></p><button class="btn" onclick="feed(10)">Ge 10g</button></div>
-            <div class="sec"><h3>WLED</h3><button class="btn" onclick="wled('rainbow')">Regnbåge</button><button class="btn" onclick="wled('off')">Av</button></div>
+            <div class="sec"><h3>Utfodring</h3><p style="margin:10px 0">Mat idag: <span id="admin-p" class="val">--</span></p><button class="btn" onclick="doFeed(10)">Ge 10g</button></div>
+            <div class="sec"><h3>WLED</h3><button class="btn" onclick="doWled('rainbow')">Regnbåge</button><button class="btn" onclick="doWled('off')">Av</button></div>
         </div>
     </div>
+
     <script>
-        let pts = 0, act = false, targets = [];
-        let moveInt, fallInt;
-        const game = document.getElementById('game');
+        console.log('ParrotOS starting...');
         
-        // Menu navigation
-        document.querySelectorAll('.menu-btn').forEach(b => {
-            b.addEventListener('click', () => {
-                document.querySelectorAll('.menu-btn').forEach(x => x.classList.remove('active'));
-                document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
-                b.classList.add('active');
-                document.getElementById(b.dataset.p).classList.add('active');
+        let pts = 0;
+        let gameActive = false;
+        let targets = [];
+        let moveInt = null;
+        let fallInt = null;
+        const gameEl = document.getElementById('game');
+        
+        // Menu clicks
+        document.querySelectorAll('.menu-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                console.log('Menu click:', this.dataset.p);
                 
-                if(b.dataset.p === 'game') startGame();
-                else stopGame();
+                document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                
+                this.classList.add('active');
+                document.getElementById(this.dataset.p).classList.add('active');
+                
+                if(this.dataset.p === 'game') {
+                    startGame();
+                } else {
+                    stopGame();
+                }
             });
         });
         
         function startGame() {
-            act = true;
+            console.log('Starting game');
+            gameActive = true;
             pts = 0;
             document.getElementById('pts').textContent = '0';
             
-            // Rensa gammalt
             targets.forEach(t => t.remove());
             targets = [];
             
-            // Skapa 5 targets
-            for(let i=0; i<5; i++) spawnTarget();
+            // Spawn 4 targets
+            for(let i=0; i<4; i++) spawnTarget();
             
-            // Flytta var 50ms
+            // Move loop
+            if(moveInt) clearInterval(moveInt);
             moveInt = setInterval(moveTargets, 50);
-            // Ny fallande var 2s
-            fallInt = setInterval(() => spawnTarget(true), 2000);
+            
+            // Fall loop
+            if(fallInt) clearInterval(fallInt);
+            fallInt = setInterval(() => spawnTarget(true), 2500);
         }
         
         function stopGame() {
-            act = false;
-            clearInterval(moveInt);
-            clearInterval(fallInt);
+            console.log('Stopping game');
+            gameActive = false;
+            if(moveInt) { clearInterval(moveInt); moveInt = null; }
+            if(fallInt) { clearInterval(fallInt); fallInt = null; }
             targets.forEach(t => t.remove());
             targets = [];
         }
         
-        function spawnTarget(falling = false) {
-            if(!act) return;
+        function spawnTarget(falling) {
+            if(!gameActive) return;
             
             const types = [
                 {c:'food',e:'🌰'},{c:'toy',e:'🧸'},{c:'fruit',e:'🍎'},
@@ -110,8 +126,8 @@
             el.className = 'tgt ' + t.c;
             el.textContent = t.e;
             
-            const maxX = game.clientWidth - 100;
-            const maxY = game.clientHeight - 100;
+            const maxX = gameEl.clientWidth - 100;
+            const maxY = gameEl.clientHeight - 100;
             
             let x = Math.random() * maxX + 5;
             let y = falling ? -100 : Math.random() * maxY + 5;
@@ -119,7 +135,7 @@
             el.style.left = x + 'px';
             el.style.top = y + 'px';
             
-            el.onclick = () => {
+            el.onclick = function() {
                 pts++;
                 document.getElementById('pts').textContent = pts;
                 el.remove();
@@ -127,22 +143,23 @@
                 setTimeout(() => spawnTarget(false), 200);
             };
             
-            game.appendChild(el);
+            gameEl.appendChild(el);
             
             targets.push({
                 el: el,
                 x: x, y: y,
-                vx: (Math.random() - 0.5) * 12,
-                vy: falling ? 1.5 + Math.random() : (Math.random() - 0.5) * 12,
+                vx: (Math.random() - 0.5) * 10,
+                vy: falling ? 2 : (Math.random() - 0.5) * 10,
                 falling: falling,
-                remove: () => { if(el.parentNode) el.remove(); }
+                remove: function() { if(el.parentNode) el.remove(); }
             });
         }
         
         function moveTargets() {
-            if(!act) return;
-            const maxX = game.clientWidth - 100;
-            const maxY = game.clientHeight - 100;
+            if(!gameActive) return;
+            
+            const maxX = gameEl.clientWidth - 100;
+            const maxY = gameEl.clientHeight - 100;
             
             targets.forEach((t, i) => {
                 t.x += t.vx;
@@ -164,39 +181,34 @@
             });
         }
         
-        async function feed(g) {
+        // API calls
+        async function doFeed(g) {
             try {
-                await fetch('/api/feed?amount=' + g, {method: 'POST'});
-                updateState();
-            } catch(e) { console.log('feed error:', e); }
+                const r = await fetch('/api/feed?amount=' + g, {method: 'POST'});
+                const d = await r.json();
+                document.getElementById('admin-p').textContent = d.total_today + 'g';
+            } catch(e) { console.error('Feed error:', e); }
         }
         
-        async function wled(v) {
+        async function doWled(v) {
             try {
-                await fetch('/api/wled/' + v, {method: 'GET'});
-            } catch(e) { console.log('wled error:', e); }
+                await fetch('/api/wled/' + v);
+            } catch(e) { console.error('WLED error:', e); }
         }
         
-        async function updateState() {
+        // Load state once at start (don't loop)
+        async function loadState() {
             try {
                 const s = await fetch('/api/state').then(r => r.json());
                 document.getElementById('pellets').textContent = s.pellets_today + '/' + s.pellet_budget + 'g';
                 document.getElementById('bonus').textContent = s.bonus_earned + 'g';
                 document.getElementById('score').textContent = s.bonus_earned * 10;
                 document.getElementById('admin-p').textContent = s.pellets_today + 'g';
-            } catch(e) { console.log('state error:', e); }
+            } catch(e) { console.error('State error:', e); }
         }
         
-        // Uppdatera state varje sekund
-        setInterval(updateState, 1000);
-        
-        // Lägg till poäng-display i game
-        if(!document.getElementById('pts')) {
-            const scoreEl = document.createElement('div');
-            scoreEl.id = 'pts';
-            scoreEl.style.cssText = 'position:absolute;top:15px;left:15px;font-size:28px;color:#4ecca3;z-index:50;font-weight:bold';
-            game.appendChild(scoreEl);
-        }
+        loadState();
+        console.log('ParrotOS ready');
     </script>
 </body>
 </html>
