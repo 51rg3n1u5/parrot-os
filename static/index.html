@@ -161,7 +161,7 @@
             const maxX = gameEl.clientWidth - 100;
             const maxY = gameEl.clientHeight - 100;
             
-            targets.forEach((t, i) => {
+            for(let i = targets.length - 1; i >= 0; i--) { const t = targets[i];
                 t.x += t.vx;
                 t.y += t.vy;
                 
