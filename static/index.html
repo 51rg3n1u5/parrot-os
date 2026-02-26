@@ -6,20 +6,23 @@
     <title>ParrotOS</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: sans-serif; background: #1a1a2e; color: #eee; overflow: hidden; }
-        #menu { position: fixed; top: 0; left: 0; right: 0; height: 60px; background: #16213e; display: flex; border-bottom: 3px solid #e94560; }
+        body { font-family: sans-serif; background: #1a1a2e; color: #eee; overflow: hidden; touch-action: manipulation; }
+        #menu { position: fixed; top: 0; left: 0; right: 0; height: 60px; background: #16213e; display: flex; border-bottom: 3px solid #e94560; z-index: 100; }
         .menu-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border: none; background: transparent; color: #aaa; font-size: 14px; cursor: pointer; }
         .menu-btn.active { color: #fff; background: rgba(233, 69, 96, 0.2); }
-        #status { position: fixed; top: 60px; left: 0; right: 0; height: 35px; background: #0f3460; display: flex; align-items: center; justify-content: space-around; font-size: 13px; }
+        #status { position: fixed; top: 60px; left: 0; right: 0; height: 35px; background: #0f3460; display: flex; align-items: center; justify-content: space-around; font-size: 13px; z-index: 100; }
         .val { color: #4ecca3; font-weight: bold; }
         #content { position: fixed; top: 95px; left: 0; right: 0; bottom: 0; }
         .page { display: none; }
         .page.active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        #game { background: #0d1b2a; position: relative; }
-        .tgt { position: absolute; width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px; cursor: pointer; }
-        .food { background: linear-gradient(#f39c12, #e74c3c); }
-        .toy { background: linear-gradient(#9b59b6, #3498db); }
-        .fruit { background: linear-gradient(#2ecc71, #27ae60); }
+        #game { background: #0d1b2a; position: relative; overflow: hidden; }
+        .tgt { position: absolute; width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px; cursor: pointer; user-select: none; -webkit-user-select: none; transition: transform 0.1s; }
+        .tgt:active { transform: scale(0.9); }
+        .food { background: linear-gradient(#f39c12, #e74c3c); box-shadow: 0 4px 15px rgba(243, 156, 18, 0.4); }
+        .toy { background: linear-gradient(#9b59b6, #3498db); box-shadow: 0 4px 15px rgba(155, 89, 182, 0.4); }
+        .fruit { background: linear-gradient(#2ecc71, #27ae60); box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4); }
+        .fall { animation: fall linear; }
+        @keyframes fall { from { transform: translateY(0); } to { transform: translateY(100vh); } }
         #calm { background: linear-gradient(#0d1b2a, #1b263b); }
         .brth { width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(#415a77, #1b263b); animation: b 4s ease-in-out infinite; }
         @keyframes b { 0%,100% { transform: scale(1); } 50% { transform: scale(1.3); } }
@@ -42,7 +45,7 @@
     </div>
     <div id="content">
         <div id="home" class="page active"><h1>🦜 ParrotOS</h1><p style="color:#888">Tryck på Lek</p></div>
-        <div id="game" class="page"><div style="position:absolute;top:15px;left:15px;font-size:22px;color:#4ecca3">Poäng: <span id="pts">0</span></div></div>
+        <div id="game" class="page"><div style="position:absolute;top:10px;left:15px;font-size:22px;color:#4ecca3;z-index:50">Poäng: <span id="pts">0</span></div></div>
         <div id="calm" class="page"><div class="brth"></div><p style="margin-top:25px;color:#778da9;font-size:22px">Shh... lugnt</p></div>
         <div id="admin" class="page">
             <h2 style="color:#4ecca3">Admin</h2>
@@ -51,27 +54,104 @@
         </div>
     </div>
     <script>
-        let pts = 0, act = false;
+        let pts = 0, act = false, targets = [], gameArea;
+        
         document.querySelectorAll(".menu-btn").forEach(b => b.onclick = () => {
             document.querySelectorAll(".menu-btn").forEach(x => x.classList.remove("active"));
             document.querySelectorAll(".page").forEach(x => x.classList.remove("active"));
             b.classList.add("active"); document.getElementById(b.dataset.p).classList.add("active");
-            if(b.dataset.p=="game"){act=true;spawn();}else{act=false;document.querySelectorAll(".tgt").forEach(t=>t.remove());}
+            if(b.dataset.p=="game"){act=true;gameArea=document.getElementById("game");startGame();}else{stopGame();}
         });
-        function spawn(){
-            if(!act)return;
-            const t=document.createElement("div");
-            t.className="tgt "+["food","toy","fruit"][Math.floor(Math.random()*3)];
-            t.textContent=["🌰","🧸","🍎"][Math.floor(Math.random()*3)];
-            const g=document.getElementById("game");
-            t.style.left=Math.random()*(g.clientWidth-90)+5+"px";
-            t.style.top=Math.random()*(g.clientHeight-90)+5+"px";
-            t.onclick=()=>{pts++;document.getElementById("pts").innerText=pts;t.remove();spawn();};
-            g.appendChild(t);
+        
+        function startGame() {
+            // Spawna 3-5 random targets
+            for(let i=0;i<4;i++) spawnTarget(false);
+            // Spawna fallande var 2:e sekund
+            setInterval(()=>{if(act)spawnTarget(true);}, 2000);
+            // Flytta targets var 100ms
+            setInterval(()=>{if(act)moveTargets();}, 100);
         }
+        
+        function stopGame() {
+            act = false;
+            targets.forEach(t => t.el.remove());
+            targets = [];
+        }
+        
+        function spawnTarget(falling) {
+            const types = [
+                {cls:"food",emoji:"🌰"},
+                {cls:"toy",emoji:"🧸"},
+                {cls:"fruit",emoji:"🍎"},
+                {cls:"food",emoji:"🥜"},
+                {cls:"fruit",emoji:"🍇"}
+            ];
+            const t = types[Math.floor(Math.random() * types.length)];
+            const el = document.createElement("div");
+            el.className = "tgt " + t.cls;
+            if(falling) el.className += " fall";
+            el.textContent = t.emoji;
+            
+            const maxX = gameArea.clientWidth - 90;
+            const maxY = gameArea.clientHeight - 90;
+            let x = Math.random() * maxX + 5;
+            let y = falling ? -90 : Math.random() * maxY + 5;
+            
+            el.style.left = x + "px";
+            el.style.top = y + "px";
+            if(falling) el.style.animationDuration = (3 + Math.random() * 3) + "s";
+            
+            el.onclick = () => {
+                pts++;
+                document.getElementById("pts").innerText = pts;
+                el.remove();
+                targets = targets.filter(t => t.el !== el);
+                setTimeout(()=>spawnTarget(false), 300);
+            };
+            
+            gameArea.appendChild(el);
+            targets.push({
+                el: el,
+                x: x, y: y,
+                vx: (Math.random() - 0.5) * 8,
+                vy: falling ? 2 : (Math.random() - 0.5) * 8,
+                falling: falling
+            });
+        }
+        
+        function moveTargets() {
+            const maxX = gameArea.clientWidth - 90;
+            const maxY = gameArea.clientHeight - 90;
+            
+            targets.forEach(t => {
+                if(t.falling) {
+                    t.y += t.vy;
+                    if(t.y > maxY + 90) {
+                        t.el.remove();
+                        targets = targets.filter(x => x !== t);
+                        spawnTarget(true);
+                    }
+                } else {
+                    t.x += t.vx;
+                    t.y += t.vy;
+                    // Studsa mot kanter
+                    if(t.x <= 0 || t.x >= maxX) { t.vx *= -1; t.x = Math.max(0, Math.min(t.x, maxX)); }
+                    if(t.y <= 0 || t.y >= maxY) { t.vy *= -1; t.y = Math.max(0, Math.min(t.y, maxY)); }
+                }
+                t.el.style.left = t.x + "px";
+                t.el.style.top = t.y + "px";
+            });
+        }
+        
         async function feed(g){await fetch("/api/feed?amount="+g,{method:"POST"});}
         async function wled(v){await fetch("/api/wled/"+v,{method:"POST"});}
-        setInterval(async()=>{const s=await fetch("/api/state").then(r=>r.json());document.getElementById("pellets").innerText=s.pellets_today+"/"+s.pellet_budget+"g";document.getElementById("bonus").innerText=s.bonus_earned+"g";document.getElementById("score").innerText=s.bonus_earned*10;document.getElementById("admin-p").innerText=s.pellets_today+"g";},2000);
+        setInterval(async()=>{
+            const s=await fetch("/api/state").then(r=>r.json());
+            document.getElementById("pellets").innerText=s.pellets_today+"/"+s.pellet_budget+"g";
+            document.getElementById("bonus").innerText=s.bonus_earned+"g";
+            document.getElementById("score").innerText=s.bonus_earned*10;
+            document.getElementById("admin-p").innerText=s.pellets_today+"g";
+        },2000);
     </script>
 </body>
 </html>
