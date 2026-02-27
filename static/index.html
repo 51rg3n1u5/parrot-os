@@ -42,6 +42,7 @@
         
         #ws-status { position: fixed; bottom: 5px; right: 5px; font-size: 10px; color: #666; }
         #ws-status.connected { color: #2ecc71; }
+        #debug { position: fixed; bottom: 20px; left: 5px; font-size: 10px; color: #888; }
     </style>
 </head>
 <body>
@@ -90,14 +91,19 @@
     </div>
     
     <div id="ws-status">Touch: 🔴</div>
+    <div id="debug"></div>
 
     <script>
         let captures = 0;
         const maxCaptures = 10;
         let gameOn = false;
         let targets = [];
-        let activeTouches = {};  // Track all active touches
+        let touches = {};  // Key = touch ID, Value = {x, y}
         const gameEl = document.getElementById('game');
+        
+        function log(msg) {
+            document.getElementById('debug').innerText = msg;
+        }
         
         function updateBar() {
             const pct = (captures / maxCaptures) * 100;
@@ -117,7 +123,7 @@
         
         function startGame() {
             gameOn = true;
-            activeTouches = {};
+            touches = {};
             if (captures >= maxCaptures) { captures = 0; updateBar(); }
             for (let i = 0; i < 3; i++) setTimeout(() => spawn(), i * 100);
             animate();
@@ -125,7 +131,7 @@
         
         function stopGame() {
             gameOn = false;
-            activeTouches = {};
+            touches = {};
             targets.forEach(t => t.el.remove());
             targets = [];
         }
@@ -145,7 +151,6 @@
             el.style.left = (Math.random() * (w - 90)) + 'px';
             el.style.top = (Math.random() * (h - 90)) + 'px';
             
-            // Click handler
             el.onpointerdown = function(e) {
                 hitTarget(el);
             };
@@ -185,14 +190,14 @@
             requestAnimationFrame(animate);
         }
         
-        // Check all active touches against all targets
-        function checkAllTouches() {
+        // Check all touches against all targets
+        function checkHits() {
             if (!gameOn || targets.length === 0) return;
             
             const rect = gameEl.getBoundingClientRect();
             
-            // Check each touch against each target
-            Object.values(activeTouches).forEach(touch => {
+            // Check each touch
+            Object.values(touches).forEach(touch => {
                 const rx = touch.x - rect.left;
                 const ry = touch.y - rect.top;
                 
@@ -201,7 +206,7 @@
                     const dist = Math.sqrt((rx - t.x - 40) ** 2 + (ry - t.y - 40) ** 2);
                     if (dist < 45) {
                         hitTarget(t.el);
-                        break; // Only one hit per touch
+                        return; // One hit per touch
                     }
                 }
             });
@@ -222,28 +227,31 @@
                 try {
                     const data = JSON.parse(event.data);
                     
-                    if (data.type === 'touch_start') {
-                        // New touch - we'll get position next
+                    if (data.type === 'touch_start' && typeof data.id !== 'undefined') {
+                        // New touch
+                        touches[data.id] = {x: data.x || 0, y: data.y || 0};
                     }
-                    else if (data.type === 'touch_move') {
-                        // Update touch position
-                        activeTouches[data.id] = {x: data.x, y: data.y};
-                        // Check hits immediately
-                        checkAllTouches();
+                    else if (data.type === 'touch_move' && typeof data.id !== 'undefined') {
+                        // Update position
+                        touches[data.id] = {x: data.x, y: data.y};
+                        // Check hits
+                        checkHits();
                     }
                     else if (data.type === 'touch_end') {
-                        // Touch released - remove old touches
-                        const keys = Object.keys(activeTouches);
+                        // Remove oldest touch
+                        const keys = Object.keys(touches);
                         if (keys.length > 0) {
-                            delete activeTouches[keys[0]];
+                            delete touches[keys[0]];
                         }
                     }
+                    
+                    // Debug: show touch count
+                    log('Touches: ' + Object.keys(touches).length);
                 } catch(e) {}
             };
             
             ws.onclose = function() {
                 document.getElementById('ws-status').textContent = 'Touch: 🔴';
-                document.getElementById('ws-status').classList.remove('connected');
                 setTimeout(connectWS, 2000);
             };
         }
