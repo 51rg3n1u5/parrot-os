@@ -145,8 +145,8 @@
             el.style.left = (Math.random() * (w - 90)) + 'px';
             el.style.top = (Math.random() * (h - 90)) + 'px';
             
-            // POINTER EVENTS - handles mouse, touch, pen
-            el.addEventListener('pointerdown', function(e) {
+            // Pointer event handler
+            el.onpointerdown = function(e) {
                 e.preventDefault();
                 e.stopPropagation();
                 
@@ -157,10 +157,7 @@
                 updateBar();
                 
                 spawn();
-            });
-            
-            // Important: capture the pointer so we get events even if finger moves
-            el.setPointerCapture(event.pointerId);
+            };
             
             gameEl.appendChild(el);
             
