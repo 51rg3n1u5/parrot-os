@@ -336,10 +336,15 @@
         // Game logic
         function startGame() {
             gameRunning = true;
-            // Create 3 targets
-            for (let i = 0; i < 3; i++) {
-                createTarget();
-            }
+            // Small delay to ensure page is visible before creating targets
+            setTimeout(function() {
+                if (gameRunning) {
+                    // Create 3 targets
+                    for (let i = 0; i < 3; i++) {
+                        createTarget();
+                    }
+                }
+            }, 50);
         }
         
         function stopGame() {
@@ -356,6 +361,10 @@
             const gameDiv = document.getElementById('game');
             const rect = gameDiv.getBoundingClientRect();
             
+            // Safety check - if rect has no dimensions, use defaults
+            const width = rect.width > 100 ? rect.width : 300;
+            const height = rect.height > 100 ? rect.height : 400;
+            
             // Create target element
             const target = document.createElement('div');
             target.className = 'target';
@@ -369,13 +378,15 @@
             
             // Random position (with margin)
             const margin = 70;
-            const x = Math.random() * (rect.width - margin * 2) + margin;
-            const y = Math.random() * (rect.height - margin * 2) + margin;
+            const x = Math.random() * Math.max(10, width - margin * 2) + margin;
+            const y = Math.random() * Math.max(10, height - margin * 2) + margin;
             target.style.left = x + 'px';
             target.style.top = y + 'px';
             
             // Click handler - use closure to capture target reference
-            target.onclick = function() {
+            target.onclick = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
                 handleTargetClick(target);
             };
             
@@ -393,6 +404,8 @@
         }
         
         function handleTargetClick(targetElement) {
+            if (!gameRunning) return;
+            
             // Add points
             state.points += 10;
             updateStatus();
@@ -401,36 +414,42 @@
             targetElement.remove();
             
             // Remove from targets array
-            targets = targets.filter(t => t.element !== targetElement);
+            targets = targets.filter(function(t) {
+                return t.element !== targetElement;
+            });
             
             // Create new target
             createTarget();
         }
         
-        // Animate targets
+        // Animate targets - only when game is running
         function animateTargets() {
-            const gameDiv = document.getElementById('game');
-            const rect = gameDiv.getBoundingClientRect();
-            
-            targets.forEach(t => {
-                // Move
-                t.x += t.vx;
-                t.y += t.vy;
+            if (gameRunning && targets.length > 0) {
+                const gameDiv = document.getElementById('game');
+                const rect = gameDiv.getBoundingClientRect();
+                const width = rect.width > 100 ? rect.width : 300;
+                const height = rect.height > 100 ? rect.height : 400;
                 
-                // Bounce off walls
-                if (t.x < 10 || t.x > rect.width - 70) {
-                    t.vx = -t.vx;
-                    t.x = Math.max(10, Math.min(rect.width - 70, t.x));
-                }
-                if (t.y < 10 || t.y > rect.height - 70) {
-                    t.vy = -t.vy;
-                    t.y = Math.max(10, Math.min(rect.height - 70, t.y));
-                }
-                
-                // Apply position
-                t.element.style.left = t.x + 'px';
-                t.element.style.top = t.y + 'px';
-            });
+                targets.forEach(function(t) {
+                    // Move
+                    t.x += t.vx;
+                    t.y += t.vy;
+                    
+                    // Bounce off walls
+                    if (t.x < 10 || t.x > width - 70) {
+                        t.vx = -t.vx;
+                        t.x = Math.max(10, Math.min(width - 70, t.x));
+                    }
+                    if (t.y < 10 || t.y > height - 70) {
+                        t.vy = -t.vy;
+                        t.y = Math.max(10, Math.min(height - 70, t.y));
+                    }
+                    
+                    // Apply position
+                    t.element.style.left = t.x + 'px';
+                    t.element.style.top = t.y + 'px';
+                });
+            }
             
             requestAnimationFrame(animateTargets);
         }
