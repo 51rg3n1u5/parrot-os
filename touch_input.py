@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Touch input handler - broadcasts each touch with unique ID."""
+"""Touch input handler - properly tracks multi-touch using slots."""
 import asyncio
 import json
 from pathlib import Path
@@ -7,7 +7,8 @@ from evdev import InputDevice, ecodes
 import websockets
 
 clients = set()
-touches = {}  # tracking_id -> {x, y}
+touches = {}  # slot -> {tracking_id, x, y}
+current_slot = 0
 
 async def handle_client(websocket):
     addr = websocket.remote_address
@@ -38,41 +39,50 @@ async def broadcast(data):
         clients.discard(c)
 
 async def read_device(path):
+    global current_slot
     dev = InputDevice(str(path))
     print(f"Reading from: {dev.name}")
     
-    global touches
+    # Track tracking_id -> slot mapping
+    tid_to_slot = {}
     
     async for event in dev.async_read_loop():
         if event.type == ecodes.EV_ABS:
-            if event.code == ecodes.ABS_MT_TRACKING_ID:
+            # Handle slot changes
+            if event.code == ecodes.ABS_MT_SLOT:
+                current_slot = event.value
+                
+            elif event.code == ecodes.ABS_MT_TRACKING_ID:
                 tid = event.value
                 if tid == -1:
-                    # Touch released - remove first touch
-                    if touches:
-                        removed_id = list(touches.keys())[0]
-                        del touches[removed_id]
-                        await broadcast({"type": "touch_end", "id": removed_id})
+                    # Touch released - find and remove this slot
+                    slot_to_remove = None
+                    for slot, info in tid_to_slot.items():
+                        if info.get('tid') == current_slot:
+                            slot_to_remove = slot
+                            break
+                    if slot_to_remove:
+                        del touches[slot_to_remove]
+                        del tid_to_slot[slot_to_remove]
+                        await broadcast({"type": "touch_end", "slot": slot_to_remove})
                 else:
                     # New touch
-                    touches[tid] = {"x": 0, "y": 0}
-                    await broadcast({"type": "touch_start", "id": tid, "x": 0, "y": 0})
+                    tid_to_slot[current_slot] = {"tid": tid}
+                    touches[current_slot] = {"tid": tid, "x": 0, "y": 0}
+                    await broadcast({"type": "touch_start", "slot": current_slot, "x": 0, "y": 0})
                     
             elif event.code == ecodes.ABS_MT_POSITION_X:
-                if touches:
-                    # Update most recent touch
-                    tid = list(touches.keys())[-1]
-                    touches[tid]["x"] = event.value
+                if current_slot in touches:
+                    touches[current_slot]["x"] = event.value
                     
             elif event.code == ecodes.ABS_MT_POSITION_Y:
-                if touches:
-                    tid = list(touches.keys())[-1]
-                    touches[tid]["y"] = event.value
+                if current_slot in touches:
+                    touches[current_slot]["y"] = event.value
                     await broadcast({
                         "type": "touch_move",
-                        "id": tid,
-                        "x": touches[tid]["x"],
-                        "y": touches[tid]["y"]
+                        "slot": current_slot,
+                        "x": touches[current_slot]["x"],
+                        "y": touches[current_slot]["y"]
                     })
 
 async def find_touch_device():

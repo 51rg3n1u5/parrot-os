@@ -227,13 +227,13 @@
                 try {
                     const data = JSON.parse(event.data);
                     
-                    if (data.type === 'touch_start' && typeof data.id !== 'undefined') {
+                    if (data.type === 'touch_start' && typeof data.slot !== 'undefined') {
                         // New touch
-                        touches[data.id] = {x: data.x || 0, y: data.y || 0};
+                        touches[data.slot] = {x: data.x || 0, y: data.y || 0};
                     }
-                    else if (data.type === 'touch_move' && typeof data.id !== 'undefined') {
+                    else if (data.type === 'touch_move' && typeof data.slot !== 'undefined') {
                         // Update position
-                        touches[data.id] = {x: data.x, y: data.y};
+                        touches[data.slot] = {x: data.x, y: data.y};
                         // Check hits
                         checkHits();
                     }
