@@ -12,10 +12,26 @@
         .menu button { flex: 1; padding: 15px; font-size: 18px; border: none; background: #0f3460; color: #aaa; cursor: pointer; border-radius: 8px; }
         .menu button.active { background: #e94560; color: #fff; }
         
-        .status { display: flex; background: #0f3460; padding: 10px; justify-content: space-around; font-size: 14px; }
+        .bar-container {
+            background: #0f3460; padding: 8px 15px; display: flex; align-items: center; gap: 15px; font-size: 14px;
+        }
+        .bar-label { color: #5dade2; font-weight: bold; }
+        .bar-track {
+            flex: 1; height: 24px; background: #1a1a2e; border-radius: 12px; overflow: hidden; position: relative;
+        }
+        .bar-fill {
+            height: 100%; width: 0%; background: linear-gradient(90deg, #5dade2, #2ecc71);
+            transition: width 0.3s, background 0.3s; border-radius: 12px;
+        }
+        .bar-fill.complete {
+            box-shadow: 0 0 20px #2ecc71, 0 0 40px #2ecc71; animation: glow 1s ease-in-out infinite alternate;
+        }
+        @keyframes glow { from { box-shadow: 0 0 10px #2ecc71; } to { box-shadow: 0 0 25px #2ecc71; } }
+        
+        .status { display: flex; background: #0f3460; padding: 8px; justify-content: space-around; font-size: 13px; }
         .status span { color: #4ecca3; font-weight: bold; }
         
-        .page { display: none; min-height: calc(100vh - 100px); }
+        .page { display: none; min-height: calc(100vh - 130px); }
         .page.active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
         
         #game { position: relative; background: #0d1b2a; }
@@ -44,10 +60,17 @@
         <button id="b4" onclick="go('admin', this)">Admin</button>
     </div>
     
+    <div class="bar-container">
+        <span class="bar-label">Fångster:</span>
+        <div class="bar-track">
+            <div class="bar-fill" id="bar"></div>
+        </div>
+    </div>
+    
     <div class="status">
         <div>Mat: <span id="pellets">--</span></div>
         <div>Bonus: <span id="bonus">--</span></div>
-        <div>Poäng: <span id="score">0</span></div>
+        <div>Captures: <span id="captures">0</span>/10</div>
     </div>
     
     <div id="home" class="page active">
@@ -55,9 +78,7 @@
         <p style="color:#888">Tryck på Lek</p>
     </div>
     
-    <div id="game" class="page">
-        <div style="position:absolute;top:10px;left:10px;font-size:24px;color:#4ecca3">Poäng: <span id="pts">0</span></div>
-    </div>
+    <div id="game" class="page"></div>
     
     <div id="calm" class="page">
         <div class="breath"></div>
@@ -79,24 +100,32 @@
     </div>
 
     <script>
-        let pts = 0;
+        let captures = 0;
+        const maxCaptures = 10;
         let gameOn = false;
         let targets = [];
         const gameEl = document.getElementById('game');
         
-        // Simple page navigation
-        function go(page, btn) {
-            console.log('go:', page);
+        function updateBar() {
+            const pct = (captures / maxCaptures) * 100;
+            const bar = document.getElementById('bar');
+            bar.style.width = pct + '%';
+            document.getElementById('captures').textContent = captures;
             
-            // Buttons
+            if (captures >= maxCaptures) {
+                bar.classList.add('complete');
+            } else {
+                bar.classList.remove('complete');
+            }
+        }
+        
+        function go(page, btn) {
             document.querySelectorAll('.menu button').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             
-            // Pages
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById(page).classList.add('active');
             
-            // Game control
             if (page === 'game' && !gameOn) {
                 startGame();
             } else if (page !== 'game' && gameOn) {
@@ -105,22 +134,20 @@
         }
         
         function startGame() {
-            console.log('startGame');
             gameOn = true;
-            pts = 0;
-            document.getElementById('pts').textContent = '0';
+            // Reset captures when starting new game
+            if (captures >= maxCaptures) {
+                captures = 0;
+                updateBar();
+            }
             
-            // Create initial targets
             for (let i = 0; i < 3; i++) {
                 setTimeout(() => spawn(), i * 100);
             }
-            
-            // Animation loop
             animate();
         }
         
         function stopGame() {
-            console.log('stopGame');
             gameOn = false;
             targets.forEach(t => t.remove());
             targets = [];
@@ -145,10 +172,13 @@
             el.style.top = (Math.random() * (h - 90)) + 'px';
             
             el.onclick = function() {
-                pts += 10;
-                document.getElementById('pts').textContent = pts;
                 el.remove();
                 targets = targets.filter(x => x.el !== el);
+                
+                captures++;
+                if (captures > maxCaptures) captures = maxCaptures;
+                updateBar();
+                
                 spawn();
             };
             
@@ -183,7 +213,6 @@
             requestAnimationFrame(animate);
         }
         
-        // API
         async function feed(g) {
             try {
                 const r = await fetch('/api/feed?amount=' + g, {method: 'POST'});
