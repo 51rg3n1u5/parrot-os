@@ -2,30 +2,21 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>ParrotOS</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: sans-serif; background: #1a1a2e; color: #eee; }
+        body { font-family: sans-serif; background: #1a1a2e; color: #eee; touch-action: none; -webkit-touch-callout: none; user-select: none; }
         
         .menu { display: flex; background: #16213e; padding: 10px; gap: 10px; }
         .menu button { flex: 1; padding: 15px; font-size: 18px; border: none; background: #0f3460; color: #aaa; cursor: pointer; border-radius: 8px; }
         .menu button.active { background: #e94560; color: #fff; }
         
-        .bar-container {
-            background: #0f3460; padding: 8px 15px; display: flex; align-items: center; gap: 15px; font-size: 14px;
-        }
+        .bar-container { background: #0f3460; padding: 8px 15px; display: flex; align-items: center; gap: 15px; font-size: 14px; }
         .bar-label { color: #5dade2; font-weight: bold; }
-        .bar-track {
-            flex: 1; height: 24px; background: #1a1a2e; border-radius: 12px; overflow: hidden; position: relative;
-        }
-        .bar-fill {
-            height: 100%; width: 0%; background: linear-gradient(90deg, #5dade2, #2ecc71);
-            transition: width 0.3s, background 0.3s; border-radius: 12px;
-        }
-        .bar-fill.complete {
-            box-shadow: 0 0 20px #2ecc71, 0 0 40px #2ecc71; animation: glow 1s ease-in-out infinite alternate;
-        }
+        .bar-track { flex: 1; height: 24px; background: #1a1a2e; border-radius: 12px; overflow: hidden; }
+        .bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #5dade2, #2ecc71); transition: width 0.3s; }
+        .bar-fill.complete { box-shadow: 0 0 20px #2ecc71; animation: glow 1s infinite; }
         @keyframes glow { from { box-shadow: 0 0 10px #2ecc71; } to { box-shadow: 0 0 25px #2ecc71; } }
         
         .status { display: flex; background: #0f3460; padding: 8px; justify-content: space-around; font-size: 13px; }
@@ -34,12 +25,13 @@
         .page { display: none; min-height: calc(100vh - 130px); }
         .page.active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
         
-        #game { position: relative; background: #0d1b2a; }
+        #game { position: relative; background: #0d1b2a; touch-action: none; }
         
         .target {
             position: absolute; width: 80px; height: 80px;
             border-radius: 50%; display: flex; align-items: center; justify-content: center;
             font-size: 40px; cursor: pointer; user-select: none;
+            touch-action: none;
         }
         .food { background: linear-gradient(#f39c12, #e74c3c); }
         .toy { background: linear-gradient(#9b59b6, #3498db); }
@@ -62,9 +54,7 @@
     
     <div class="bar-container">
         <span class="bar-label">Fångster:</span>
-        <div class="bar-track">
-            <div class="bar-fill" id="bar"></div>
-        </div>
+        <div class="bar-track"><div class="bar-fill" id="bar"></div></div>
     </div>
     
     <div class="status">
@@ -111,12 +101,7 @@
             const bar = document.getElementById('bar');
             bar.style.width = pct + '%';
             document.getElementById('captures').textContent = captures;
-            
-            if (captures >= maxCaptures) {
-                bar.classList.add('complete');
-            } else {
-                bar.classList.remove('complete');
-            }
+            bar.classList.toggle('complete', captures >= maxCaptures);
         }
         
         function go(page, btn) {
@@ -126,39 +111,28 @@
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById(page).classList.add('active');
             
-            if (page === 'game' && !gameOn) {
-                startGame();
-            } else if (page !== 'game' && gameOn) {
-                stopGame();
-            }
+            if (page === 'game' && !gameOn) startGame();
+            else if (page !== 'game' && gameOn) stopGame();
         }
         
         function startGame() {
             gameOn = true;
-            // Reset captures when starting new game
-            if (captures >= maxCaptures) {
-                captures = 0;
-                updateBar();
-            }
+            if (captures >= maxCaptures) { captures = 0; updateBar(); }
             
-            for (let i = 0; i < 3; i++) {
-                setTimeout(() => spawn(), i * 100);
-            }
+            for (let i = 0; i < 3; i++) setTimeout(() => spawn(), i * 100);
             animate();
         }
         
         function stopGame() {
             gameOn = false;
-            targets.forEach(t => t.remove());
+            targets.forEach(t => t.el.remove());
             targets = [];
         }
         
         function spawn() {
             if (!gameOn) return;
             
-            const types = [
-                {c:'food',e:'🌰'},{c:'toy',e:'🧸'},{c:'fruit',e:'🍎'}
-            ];
+            const types = [{c:'food',e:'🌰'},{c:'toy',e:'🧸'},{c:'fruit',e:'🍎'}];
             const t = types[Math.floor(Math.random() * types.length)];
             
             const el = document.createElement('div');
@@ -171,16 +145,22 @@
             el.style.left = (Math.random() * (w - 90)) + 'px';
             el.style.top = (Math.random() * (h - 90)) + 'px';
             
-            el.onclick = function() {
+            // POINTER EVENTS - handles mouse, touch, pen
+            el.addEventListener('pointerdown', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
                 el.remove();
                 targets = targets.filter(x => x.el !== el);
                 
-                captures++;
-                if (captures > maxCaptures) captures = maxCaptures;
+                captures = Math.min(captures + 1, maxCaptures);
                 updateBar();
                 
                 spawn();
-            };
+            });
+            
+            // Important: capture the pointer so we get events even if finger moves
+            el.setPointerCapture(event.pointerId);
             
             gameEl.appendChild(el);
             
@@ -222,10 +202,7 @@
             } catch(e) { console.error(e); }
         }
         
-        async function wled(v) {
-            try { await fetch('/api/wled/' + v); } 
-            catch(e) { console.error(e); }
-        }
+        async function wled(v) { try { await fetch('/api/wled/' + v); } catch(e) { console.error(e); } }
         
         async function loadState() {
             try {
