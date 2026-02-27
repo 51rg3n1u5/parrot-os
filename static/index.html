@@ -5,463 +5,210 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ParrotOS</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #1a1a2e;
-            color: #eee;
-            min-height: 100vh;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: sans-serif; background: #1a1a2e; color: #eee; }
         
-        /* Top Menu */
-        .menu {
-            display: flex;
-            background: #16213e;
-            padding: 10px;
-            gap: 10px;
-        }
-        .menu button {
-            flex: 1;
-            padding: 15px;
-            font-size: 18px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            background: #0f3460;
-            color: #eee;
-            transition: background 0.2s;
-        }
-        .menu button:hover {
-            background: #1a4a7a;
-        }
-        .menu button.active {
-            background: #e94560;
-        }
+        .menu { display: flex; background: #16213e; padding: 10px; gap: 10px; }
+        .menu button { flex: 1; padding: 15px; font-size: 18px; border: none; background: #0f3460; color: #aaa; cursor: pointer; border-radius: 8px; }
+        .menu button.active { background: #e94560; color: #fff; }
         
-        /* Status Bar */
-        .status-bar {
-            display: flex;
-            justify-content: space-around;
-            background: #0f3460;
-            padding: 15px;
-            font-size: 20px;
-            border-bottom: 2px solid #e94560;
-        }
-        .status-item {
-            text-align: center;
-        }
-        .status-label {
-            font-size: 14px;
-            color: #aaa;
-        }
-        .status-value {
-            font-weight: bold;
-            color: #e94560;
-        }
+        .status { display: flex; background: #0f3460; padding: 10px; justify-content: space-around; font-size: 14px; }
+        .status span { color: #4ecca3; font-weight: bold; }
         
-        /* Pages */
-        .page {
-            display: none;
-            padding: 20px;
-            min-height: calc(100vh - 140px);
-        }
-        .page.active {
-            display: block;
-        }
+        .page { display: none; min-height: calc(100vh - 100px); }
+        .page.active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
         
-        /* Home Page */
-        #home {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        #home h1 {
-            font-size: 48px;
-            color: #e94560;
-        }
+        #game { position: relative; background: #0d1b2a; }
         
-        /* Game Page */
-        #game {
-            position: relative;
-            background: #0d1b2a;
-            overflow: hidden;
-        }
         .target {
-            position: absolute;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            cursor: pointer;
-            transition: transform 0.1s;
-            user-select: none;
+            position: absolute; width: 80px; height: 80px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 40px; cursor: pointer; user-select: none;
         }
-        .target:hover {
-            transform: scale(1.1);
-        }
+        .food { background: linear-gradient(#f39c12, #e74c3c); }
+        .toy { background: linear-gradient(#9b59b6, #3498db); }
+        .fruit { background: linear-gradient(#2ecc71, #27ae60); }
         
-        /* Calm Page */
-        #calm {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: #0d1b2a;
-        }
-        .breath-circle {
-            width: 200px;
-            height: 200px;
-            border-radius: 50%;
-            background: radial-gradient(circle, #4a90a4 0%, #2d5a6b 100%);
-            animation: breathe 6s ease-in-out infinite;
-        }
-        @keyframes breathe {
-            0%, 100% { transform: scale(1); opacity: 0.6; }
-            50% { transform: scale(1.5); opacity: 1; }
-        }
-        .breath-text {
-            margin-top: 30px;
-            font-size: 24px;
-            color: #4a90a4;
-        }
+        .breath { width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(#415a77, #1b263b); animation: b 4s ease-in-out infinite; }
+        @keyframes b { 0%,100% { transform: scale(1); } 50% { transform: scale(1.4); } }
         
-        /* Admin Page */
-        #admin {
-            max-width: 400px;
-            margin: 0 auto;
-        }
-        .admin-section {
-            background: #16213e;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-        .admin-section h2 {
-            margin-bottom: 15px;
-            color: #e94560;
-        }
-        .admin-btn {
-            width: 100%;
-            padding: 15px;
-            margin: 5px 0;
-            font-size: 18px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .feed-btn {
-            background: #4a90a4;
-            color: white;
-        }
-        .feed-btn:hover {
-            background: #5aa0b4;
-        }
-        .wled-btn {
-            background: #e94560;
-            color: white;
-        }
-        .wled-btn:hover {
-            background: #f05570;
-        }
-        .message {
-            margin-top: 10px;
-            padding: 10px;
-            border-radius: 5px;
-            text-align: center;
-        }
-        .success { background: #2e7d32; }
-        .error { background: #c62828; }
+        .sec { background: #16213e; padding: 20px; border-radius: 8px; margin: 10px; }
+        .btn { padding: 15px 30px; background: #4ecca3; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin: 5px; }
     </style>
 </head>
 <body>
-    <!-- Top Menu -->
     <div class="menu">
-        <button id="btn-hem" onclick="showPage('home')">Hem</button>
-        <button id="btn-lek" onclick="showPage('game')">Lek</button>
-        <button id="btn-lugnt" onclick="showPage('calm')">Lugnt</button>
-        <button id="btn-admin" onclick="showPage('admin')">Admin</button>
+        <button id="b1" onclick="go('home', this)">Hem</button>
+        <button id="b2" onclick="go('game', this)">Lek</button>
+        <button id="b3" onclick="go('calm', this)">Lugnt</button>
+        <button id="b4" onclick="go('admin', this)">Admin</button>
     </div>
     
-    <!-- Status Bar -->
-    <div class="status-bar">
-        <div class="status-item">
-            <div class="status-label">Mat</div>
-            <div class="status-value" id="pellets">--g</div>
-        </div>
-        <div class="status-item">
-            <div class="status-label">Bonus</div>
-            <div class="status-value" id="bonus">--</div>
-        </div>
-        <div class="status-item">
-            <div class="status-label">Poäng</div>
-            <div class="status-value" id="points">--</div>
-        </div>
+    <div class="status">
+        <div>Mat: <span id="pellets">--</span></div>
+        <div>Bonus: <span id="bonus">--</span></div>
+        <div>Poäng: <span id="score">0</span></div>
     </div>
     
-    <!-- Home Page -->
     <div id="home" class="page active">
-        <h1>ParrotOS</h1>
+        <h1 style="font-size:48px">🦜 ParrotOS</h1>
+        <p style="color:#888">Tryck på Lek</p>
     </div>
     
-    <!-- Game Page -->
     <div id="game" class="page">
+        <div style="position:absolute;top:10px;left:10px;font-size:24px;color:#4ecca3">Poäng: <span id="pts">0</span></div>
     </div>
     
-    <!-- Calm Page -->
     <div id="calm" class="page">
-        <div class="breath-circle"></div>
-        <div class="breath-text">Andas...</div>
+        <div class="breath"></div>
+        <p style="margin-top:20px;color:#778da9;font-size:20px">Shh...</p>
     </div>
     
-    <!-- Admin Page -->
     <div id="admin" class="page">
-        <div class="admin-section">
-            <h2>Mat</h2>
-            <button class="admin-btn feed-btn" onclick="feed()">Mata 10g</button>
-            <div id="feed-message"></div>
+        <h2 style="color:#4ecca3">Admin</h2>
+        <div class="sec">
+            <h3>Utfodring</h3>
+            <p>Mat idag: <span id="admin-p">--</span></p>
+            <button class="btn" onclick="feed(10)">Ge 10g</button>
         </div>
-        <div class="admin-section">
-            <h2>WLED</h2>
-            <button class="admin-btn wled-btn" onclick="wledControl('on')">Tänd</button>
-            <button class="admin-btn wled-btn" onclick="wledControl('off')">Släck</button>
-            <div id="wled-message"></div>
+        <div class="sec">
+            <h3>WLED</h3>
+            <button class="btn" onclick="wled('rainbow')">Regnbåge</button>
+            <button class="btn" onclick="wled('off')">Av</button>
         </div>
     </div>
 
     <script>
-        // State
-        let state = {
-            pellets: 0,
-            bonus: 0,
-            points: 0
-        };
-        
+        let pts = 0;
+        let gameOn = false;
         let targets = [];
-        let gameRunning = false;
+        const gameEl = document.getElementById('game');
         
-        // Emojis for targets
-        const emojis = ['🦜', '🍇', '🍎', '🥕', '🌟', '💎', '🐦', '🌈'];
-        const colors = ['#e94560', '#4a90a4', '#50c878', '#ffd700', '#ff6b6b', '#9b59b6'];
-        
-        // Page navigation
-        function showPage(pageId) {
-            // Hide all pages
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        // Simple page navigation
+        function go(page, btn) {
+            console.log('go:', page);
+            
+            // Buttons
             document.querySelectorAll('.menu button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
             
-            // Show selected page
-            document.getElementById(pageId).classList.add('active');
-            document.getElementById('btn-' + getPageBtn(pageId)).classList.add('active');
+            // Pages
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(page).classList.add('active');
             
-            // Start/stop game
-            if (pageId === 'game') {
+            // Game control
+            if (page === 'game' && !gameOn) {
                 startGame();
-            } else {
+            } else if (page !== 'game' && gameOn) {
                 stopGame();
             }
         }
         
-        function getPageBtn(pageId) {
-            const map = { 'home': 'hem', 'game': 'lek', 'calm': 'lugnt', 'admin': 'admin' };
-            return map[pageId] || pageId;
-        }
-        
-        // API calls
-        async function fetchState() {
-            try {
-                const res = await fetch('/api/state');
-                if (res.ok) {
-                    state = await res.json();
-                    updateStatus();
-                }
-            } catch (e) {
-                console.log('Could not fetch state:', e);
-            }
-        }
-        
-        async function feed() {
-            const msgDiv = document.getElementById('feed-message');
-            msgDiv.innerHTML = '';
-            try {
-                const res = await fetch('/api/feed', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ amount: 10 })
-                });
-                if (res.ok) {
-                    msgDiv.innerHTML = '<div class="message success">Matad 10g!</div>';
-                    fetchState();
-                } else {
-                    msgDiv.innerHTML = '<div class="message error">Fel vid matning</div>';
-                }
-            } catch (e) {
-                msgDiv.innerHTML = '<div class="message error">Kunde inte ansluta</div>';
-            }
-        }
-        
-        async function wledControl(action) {
-            const msgDiv = document.getElementById('wled-message');
-            msgDiv.innerHTML = '';
-            try {
-                const res = await fetch('/api/wled', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: action })
-                });
-                if (res.ok) {
-                    msgDiv.innerHTML = '<div class="message success">WLED ' + action + '</div>';
-                } else {
-                    msgDiv.innerHTML = '<div class="message error">Fel vid WLED</div>';
-                }
-            } catch (e) {
-                msgDiv.innerHTML = '<div class="message error">Kunde inte ansluta</div>';
-            }
-        }
-        
-        // Update status bar
-        function updateStatus() {
-            document.getElementById('pellets').textContent = state.pellets + 'g';
-            document.getElementById('bonus').textContent = state.bonus;
-            document.getElementById('points').textContent = state.points;
-        }
-        
-        // Game logic
         function startGame() {
-            gameRunning = true;
-            // Small delay to ensure page is visible before creating targets
-            setTimeout(function() {
-                if (gameRunning) {
-                    // Create 3 targets
-                    for (let i = 0; i < 3; i++) {
-                        createTarget();
-                    }
-                }
-            }, 50);
+            console.log('startGame');
+            gameOn = true;
+            pts = 0;
+            document.getElementById('pts').textContent = '0';
+            
+            // Create initial targets
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => spawn(), i * 100);
+            }
+            
+            // Animation loop
+            animate();
         }
         
         function stopGame() {
-            gameRunning = false;
-            // Clear all targets
-            const gameDiv = document.getElementById('game');
-            gameDiv.innerHTML = '';
+            console.log('stopGame');
+            gameOn = false;
+            targets.forEach(t => t.remove());
             targets = [];
         }
         
-        function createTarget() {
-            if (!gameRunning) return;
+        function spawn() {
+            if (!gameOn) return;
             
-            const gameDiv = document.getElementById('game');
-            const rect = gameDiv.getBoundingClientRect();
+            const types = [
+                {c:'food',e:'🌰'},{c:'toy',e:'🧸'},{c:'fruit',e:'🍎'}
+            ];
+            const t = types[Math.floor(Math.random() * types.length)];
             
-            // Safety check - if rect has no dimensions, use defaults
-            const width = rect.width > 100 ? rect.width : 300;
-            const height = rect.height > 100 ? rect.height : 400;
+            const el = document.createElement('div');
+            el.className = 'target ' + t.c;
+            el.textContent = t.e;
             
-            // Create target element
-            const target = document.createElement('div');
-            target.className = 'target';
+            const w = gameEl.clientWidth || 300;
+            const h = gameEl.clientHeight || 400;
             
-            // Random emoji and color
-            const emoji = emojis[Math.floor(Math.random() * emojis.length)];
-            const color = colors[Math.floor(Math.random() * colors.length)];
+            el.style.left = (Math.random() * (w - 90)) + 'px';
+            el.style.top = (Math.random() * (h - 90)) + 'px';
             
-            target.textContent = emoji;
-            target.style.background = color;
-            
-            // Random position (with margin)
-            const margin = 70;
-            const x = Math.random() * Math.max(10, width - margin * 2) + margin;
-            const y = Math.random() * Math.max(10, height - margin * 2) + margin;
-            target.style.left = x + 'px';
-            target.style.top = y + 'px';
-            
-            // Click handler - use closure to capture target reference
-            target.onclick = function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                handleTargetClick(target);
+            el.onclick = function() {
+                pts += 10;
+                document.getElementById('pts').textContent = pts;
+                el.remove();
+                targets = targets.filter(x => x.el !== el);
+                spawn();
             };
             
-            gameDiv.appendChild(target);
+            gameEl.appendChild(el);
             
-            // Store target data
-            const targetData = {
-                element: target,
-                x: x,
-                y: y,
-                vx: (Math.random() - 0.5) * 2,
-                vy: (Math.random() - 0.5) * 2
-            };
-            targets.push(targetData);
+            targets.push({
+                el: el,
+                x: parseFloat(el.style.left),
+                y: parseFloat(el.style.top),
+                vx: (Math.random() - 0.5) * 8,
+                vy: (Math.random() - 0.5) * 8
+            });
         }
         
-        function handleTargetClick(targetElement) {
-            if (!gameRunning) return;
+        function animate() {
+            if (!gameOn) return;
             
-            // Add points
-            state.points += 10;
-            updateStatus();
+            const w = gameEl.clientWidth || 300;
+            const h = gameEl.clientHeight || 400;
             
-            // Remove target from DOM
-            targetElement.remove();
-            
-            // Remove from targets array
-            targets = targets.filter(function(t) {
-                return t.element !== targetElement;
+            targets.forEach(t => {
+                t.x += t.vx;
+                t.y += t.vy;
+                
+                if (t.x <= 0 || t.x >= w - 90) { t.vx *= -1; t.x = Math.max(0, Math.min(t.x, w - 90)); }
+                if (t.y <= 0 || t.y >= h - 90) { t.vy *= -1; t.y = Math.max(0, Math.min(t.y, h - 90)); }
+                
+                t.el.style.left = t.x + 'px';
+                t.el.style.top = t.y + 'px';
             });
             
-            // Create new target
-            createTarget();
+            requestAnimationFrame(animate);
         }
         
-        // Animate targets - only when game is running
-        function animateTargets() {
-            if (gameRunning && targets.length > 0) {
-                const gameDiv = document.getElementById('game');
-                const rect = gameDiv.getBoundingClientRect();
-                const width = rect.width > 100 ? rect.width : 300;
-                const height = rect.height > 100 ? rect.height : 400;
-                
-                targets.forEach(function(t) {
-                    // Move
-                    t.x += t.vx;
-                    t.y += t.vy;
-                    
-                    // Bounce off walls
-                    if (t.x < 10 || t.x > width - 70) {
-                        t.vx = -t.vx;
-                        t.x = Math.max(10, Math.min(width - 70, t.x));
-                    }
-                    if (t.y < 10 || t.y > height - 70) {
-                        t.vy = -t.vy;
-                        t.y = Math.max(10, Math.min(height - 70, t.y));
-                    }
-                    
-                    // Apply position
-                    t.element.style.left = t.x + 'px';
-                    t.element.style.top = t.y + 'px';
-                });
-            }
-            
-            requestAnimationFrame(animateTargets);
+        // API
+        async function feed(g) {
+            try {
+                const r = await fetch('/api/feed?amount=' + g, {method: 'POST'});
+                const d = await r.json();
+                document.getElementById('admin-p').textContent = d.total_today + 'g';
+                loadState();
+            } catch(e) { console.error(e); }
         }
         
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            fetchState();
-            animateTargets();
-            
-            // Refresh state periodically
-            setInterval(fetchState, 5000);
-        });
+        async function wled(v) {
+            try { await fetch('/api/wled/' + v); } 
+            catch(e) { console.error(e); }
+        }
+        
+        async function loadState() {
+            try {
+                const s = await fetch('/api/state').then(r => r.json());
+                document.getElementById('pellets').textContent = s.pellets_today + '/' + s.pellet_budget + 'g';
+                document.getElementById('bonus').textContent = s.bonus_earned + 'g';
+                document.getElementById('admin-p').textContent = s.pellets_today + 'g';
+            } catch(e) { console.error(e); }
+        }
+        
+        loadState();
+        setInterval(loadState, 10000);
     </script>
 </body>
 </html>
