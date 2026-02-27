@@ -1,62 +1,45 @@
 #!/usr/bin/env python3
-"""Touch input handler - reads multi-touch and broadcasts via WebSocket."""
+"""Touch input handler - using websockets library for proper WS handling."""
 import asyncio
 import json
 from pathlib import Path
 from evdev import InputDevice, ecodes
+import websockets
 
 clients = set()
 current_touches = {}
 
-async def handle_client(reader, writer):
-    addr = writer.get_extra_info('peername')
+async def handle_client(websocket):
+    """Handle a WebSocket client connection."""
+    addr = websocket.remote_address
     print(f"Client connected: {addr}")
-    clients.add(writer)
+    clients.add(websocket)
     
     try:
-        # Read WebSocket upgrade request
-        data = await reader.read(1024)
-        
-        # Send 101 Switching Protocols
-        response = b"HTTP/1.1 101 Switching Protocols\r\n"
-        response += b"Upgrade: websocket\r\n"
-        response += b"Connection: Upgrade\r\n"
-        response += b"\r\n"
-        
-        writer.write(response)
-        await writer.drain()
-        
-        # Send welcome message
-        await send_msg(writer, json.dumps({"type": "connected"}))
+        # Send welcome
+        await websocket.send(json.dumps({"type": "connected"}))
         print(f"Sent connected to {addr}")
         
-        # Keep connection alive
-        while True:
-            data = await reader.read(2)
-            if not data:
-                break
-                
+        # Keep alive - just listen
+        async for msg in websocket:
+            print(f"Received: {msg}")
+            
+    except websockets.exceptions.ConnectionClosed:
+        print(f"Client {addr} disconnected")
     except Exception as e:
-        print(f"Client error: {e}")
+        print(f"Error with {addr}: {e}")
     finally:
-        clients.discard(writer)
-        writer.close()
-
-async def send_msg(writer, msg):
-    try:
-        data = msg.encode('utf-8')
-        header = bytes([0x81, len(data)])
-        writer.write(header + data)
-        await writer.drain()
-    except Exception as e:
-        print(f"Send error: {e}")
+        clients.discard(websocket)
 
 async def broadcast(data):
+    """Broadcast to all clients."""
+    if not clients:
+        return
     msg = json.dumps(data)
     dead = set()
     for c in clients:
         try:
-            await send_msg(c, msg)
+            await c.send(msg)
         except:
             dead.add(c)
     for c in dead:
@@ -66,20 +49,16 @@ async def read_device(path):
     """Read touch events from device."""
     dev = InputDevice(str(path))
     print(f"Reading from: {dev.name}")
-    print("Waiting for touch events...")
     
     async for event in dev.async_read_loop():
         if event.type == ecodes.EV_ABS:
             if event.code == ecodes.ABS_MT_TRACKING_ID:
                 tid = event.value
                 if tid == -1:
-                    # Touch released
                     if current_touches:
-                        old = current_touches.pop(list(current_touches.keys())[0], None)
-                        if old:
-                            await broadcast({"type": "touch_end", "id": tid})
+                        current_touches.pop(list(current_touches.keys())[0], None)
+                        await broadcast({"type": "touch_end"})
                 else:
-                    # New touch
                     current_touches[tid] = {"x": 0, "y": 0}
                     await broadcast({"type": "touch_start", "id": tid})
                     
@@ -94,7 +73,6 @@ async def read_device(path):
                     current_touches[key]["y"] = event.value
                     await broadcast({
                         "type": "touch_move",
-                        "id": key,
                         "x": current_touches[key]["x"],
                         "y": current_touches[key]["y"]
                     })
@@ -110,7 +88,7 @@ async def find_touch_device():
                 has_x = any(c[0] == ecodes.ABS_X for c in abs_caps)
                 has_y = any(c[0] == ecodes.ABS_Y for c in abs_caps)
                 if has_x and has_y:
-                    print(f"Found touch device: {dev.name} ({path})")
+                    print(f"Found: {dev.name} ({path})")
                     return path
         except:
             pass
@@ -120,22 +98,22 @@ async def main():
     device = await find_touch_device()
     
     if not device:
-        print("ERROR: No touch device found!")
+        print("ERROR: No touch device!")
         return
     
-    print(f"\n=== TOUCH INPUT READY ===")
-    print(f"WebSocket: ws://localhost:8765")
-    print(f"Device: {device}")
-    print(f"========================\n")
+    print(f"\n=== TOUCH INPUT ===")
+    print(f"ws://localhost:8765")
+    print(f"==================\n")
     
-    # Start WebSocket server
-    server = await asyncio.start_server(handle_client, '0.0.0.0', 8765)
-    
-    # Start reading from device
-    asyncio.create_task(read_device(device))
-    
-    async with server:
-        await server.serve_forever()
+    # Start WebSocket server using websockets library
+    async with websockets.serve(handle_client, '0.0.0.0', 8765):
+        print("Server started, waiting for clients...")
+        
+        # Start reading device
+        asyncio.create_task(read_device(device))
+        
+        # Run forever
+        await asyncio.Future()
 
 if __name__ == '__main__':
     asyncio.run(main())
