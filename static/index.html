@@ -104,8 +104,8 @@
         let gameOn = false;
         let targets = [];
         let touches = {};
-        let touchMaxX = 32768;  // Default max for touch device
-        let touchMaxY = 32768;
+        let touchMaxX = 32600;  // Default max for touch device
+        let touchMaxY = 32600;
         const gameEl = document.getElementById('game');
         
         function logTouch(msg) {
@@ -133,8 +133,8 @@
             gameOn = true;
             touches = {};
             // Get game area size for coordinate scaling
-            touchMaxX = gameEl.clientWidth || 800;
-            touchMaxY = gameEl.clientHeight || 600;
+            touchMaxX = 32600;
+            touchMaxY = 32600;
             logTouch('Game started, max: ' + touchMaxX + 'x' + touchMaxY);
             
             if (captures >= maxCaptures) { captures = 0; updateBar(); }
