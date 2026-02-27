@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Touch input handler - reads multi-touch and sends via WebSocket.
+Touch input handler - async version using evdev async.
 """
 import asyncio
 import json
@@ -17,7 +17,6 @@ except ImportError:
     from evdev import InputDevice, ecodes
 
 clients = set()
-touches = {}
 
 async def handle_client(reader, writer):
     addr = writer.get_extra_info('peername')
@@ -25,9 +24,10 @@ async def handle_client(reader, writer):
     clients.add(writer)
     
     try:
-        # WebSocket handshake
+        # Read HTTP upgrade request
         data = await reader.read(1024)
         
+        # WebSocket 101 response
         response = b"HTTP/1.1 101 Switching Protocols\r\n"
         response += b"Upgrade: websocket\r\n"
         response += b"Connection: Upgrade\r\n"
@@ -36,12 +36,13 @@ async def handle_client(reader, writer):
         writer.write(response)
         await writer.drain()
         
-        # Send welcome
+        # Send connected message
         msg = json.dumps({"type": "connected"})
         await send_msg(writer, msg)
         
         print(f"Sent connected to {addr}")
         
+        # Keep alive
         while True:
             data = await reader.read(2)
             if not data:
@@ -58,46 +59,10 @@ async def send_msg(writer, msg):
         data = msg.encode('utf-8')
         header = bytearray([0x81])
         header.append(len(data))
-        writer.write(header + data)
+        writer.write(bytes(header) + data)
         await writer.drain()
     except:
         pass
-
-async def read_touch(device_path):
-    """Read touch events from device"""
-    dev = InputDevice(device_path)
-    print(f"Reading from: {dev.name}")
-    
-    for event in dev.read_loop():
-        if event.type == ecodes.EV_ABS:
-            if event.code == ecodes.ABS_MT_TRACKING_ID:
-                tid = event.value
-                if tid == -1:
-                    # Touch up
-                    if touches:
-                        key = list(touches.keys())[0]
-                        del touches[key]
-                        await broadcast({"type": "touch_end", "id": tid})
-                else:
-                    # Touch down
-                    touches[tid] = {"x": 0, "y": 0}
-                    await broadcast({"type": "touch_start", "id": tid})
-                    
-            elif event.code == ecodes.ABS_MT_POSITION_X:
-                if touches:
-                    key = list(touches.keys())[-1]
-                    touches[key]["x"] = event.value
-                    
-            elif event.code == ecodes.ABS_MT_POSITION_Y:
-                if touches:
-                    key = list(touches.keys())[-1]
-                    touches[key]["y"] = event.value
-                    await broadcast({
-                        "type": "touch_move",
-                        "id": key,
-                        "x": touches[key]["x"],
-                        "y": touches[key]["y"]
-                    })
 
 async def broadcast(data):
     msg = json.dumps(data)
@@ -109,6 +74,29 @@ async def broadcast(data):
             dead.add(c)
     for c in dead:
         clients.discard(c)
+
+async def read_device(device_path):
+    """Read device using asyncio with file descriptor."""
+    dev = InputDevice(device_path)
+    print(f"Reading from: {dev.name}")
+    
+    # Get file descriptor
+    fd = dev.fd
+    
+    loop = asyncio.get_event_loop()
+    
+    while True:
+        try:
+            # Use async wait for file descriptor
+            await asyncio.wait_for(
+                loop.run_in_executor(None, lambda: dev.read()),
+                timeout=0.1
+            )
+        except asyncio.TimeoutError:
+            continue
+        except Exception as e:
+            print(f"Device error: {e}")
+            break
 
 async def main():
     # Find touch devices
@@ -138,8 +126,8 @@ async def main():
     # Start WS server
     server = await asyncio.start_server(handle_client, '0.0.0.0', 8765)
     
-    # Start reading from first device
-    asyncio.create_task(read_touch(devices[0]))
+    # Start device reader in background
+    asyncio.create_task(read_device(devices[0]))
     
     async with server:
         await server.serve_forever()
