@@ -103,7 +103,7 @@
         const maxCaptures = 10;
         let gameOn = false;
         let targets = [];
-        let touches = {};
+        let touches = {}; let lastCheck = 0;;
         let touchMaxX = 32600;  // Default max for touch device
         let touchMaxY = 32600;
         const gameEl = document.getElementById('game');
@@ -262,7 +262,7 @@
                         const slot = data.slot || 0;
                         touches[slot] = {x: data.x, y: data.y};
                         document.getElementById('touch-count').textContent = Object.keys(touches).length;
-                        checkHits();
+                        if (data.type === 'touch_start' || Date.now() - lastCheck > 100) { checkHits(); lastCheck = Date.now(); }
                     }
                     else if (data.type === 'touch_end') {
                         const keys = Object.keys(touches);
