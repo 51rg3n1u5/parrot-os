@@ -227,7 +227,7 @@
                 for (let i = targets.length - 1; i >= 0; i--) {
                     const t = targets[i];
                     const dist = Math.sqrt((rx - t.x - 40) ** 2 + (ry - t.y - 40) ** 2);
-                    if (dist < 45) {
+                    if (dist < 60) {
                         hitTarget(t.el);
                         return;
                     }
