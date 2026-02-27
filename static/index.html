@@ -42,12 +42,14 @@
             border: 3px solid #2ecc71;
             pointer-events: none;
             transform: translate(-50%, -50%);
-            animation: pulse 0.3s ease-out;
+            animation: appear 0.2s ease-out, fadeout 1s 1s forwards;
         }
-        @keyframes pulse {
+        @keyframes appear {
             0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
-            50% { transform: translate(-50%, -50%) scale(1.2); }
             100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+        @keyframes fadeout {
+            to { opacity: 0; }
         }
         
         .breath { width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(#415a77, #1b263b); animation: b 4s ease-in-out infinite; }
@@ -225,16 +227,32 @@
             };
         }
         
-        function updateTouchDot(slot, rawX, rawY) {
+        function createTouchDot(slot, rawX, rawY) {
             const scaled = scaleTouch(rawX, rawY);
             
+            const dot = document.createElement('div');
+            dot.className = 'touch-dot';
+            dot.style.left = scaled.x + 'px';
+            dot.style.top = scaled.y + 'px';
+            document.body.appendChild(dot);
+            touchDots[slot] = dot;
+            
+            // Remove after 2 seconds
+            setTimeout(() => {
+                if (touchDots[slot]) {
+                    touchDots[slot].remove();
+                    delete touchDots[slot];
+                }
+            }, 2000);
+        }
+        
+        function updateTouchDot(slot, rawX, rawY) {
             if (!touchDots[slot]) {
-                const dot = document.createElement('div');
-                dot.className = 'touch-dot';
-                document.body.appendChild(dot);
-                touchDots[slot] = dot;
+                createTouchDot(slot, rawX, rawY);
+                return;
             }
             
+            const scaled = scaleTouch(rawX, rawY);
             touchDots[slot].style.left = scaled.x + 'px';
             touchDots[slot].style.top = scaled.y + 'px';
         }
@@ -278,7 +296,7 @@
                     if (data.type === 'touch_start') {
                         const slot = data.slot !== undefined ? data.slot : 0;
                         touches[slot] = {x: data.x || 0, y: data.y || 0};
-                        updateTouchDot(slot, data.x || 0, data.y || 0);
+                        createTouchDot(slot, data.x || 0, data.y || 0);
                         document.getElementById('touch-count').textContent = Object.keys(touches).length;
                     }
                     else if (data.type === 'touch_move') {
@@ -310,7 +328,6 @@
             ws.onclose = function() {
                 document.getElementById('ws-status').textContent = 'Touch: 🔴';
                 document.getElementById('touch-status').textContent = 'Frånkopplad';
-                document.getElementById('touch-status').style.color = 'red';
                 setTimeout(connectWS, 2000);
             };
         }
