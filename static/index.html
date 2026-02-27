@@ -251,7 +251,7 @@
             ws.onmessage = function(event) {
                 try {
                     const data = JSON.parse(event.data);
-                    logTouch(data.type + ' slot:' + (data.slot || '?'));
+                    logTouch(data.type + ' slot:' + (data.slot !== undefined ? data.slot : '?'));
                     
                     if (data.type === 'touch_start') {
                         const slot = data.slot || 0;
