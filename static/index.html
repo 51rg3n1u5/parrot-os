@@ -34,13 +34,29 @@
         .toy { background: linear-gradient(#9b59b6, #3498db); }
         .fruit { background: linear-gradient(#2ecc71, #27ae60); }
         
+        .touch-dot {
+            position: absolute;
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            background: rgba(46, 204, 113, 0.6);
+            border: 3px solid #2ecc71;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            animation: pulse 0.3s ease-out;
+        }
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            50% { transform: translate(-50%, -50%) scale(1.2); }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+        
         .breath { width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(#415a77, #1b263b); animation: b 4s ease-in-out infinite; }
         @keyframes b { 0%,100% { transform: scale(1); } 50% { transform: scale(1.4); } }
         
         .sec { background: #16213e; padding: 20px; border-radius: 8px; margin: 10px; }
         .btn { padding: 15px 30px; background: #4ecca3; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin: 5px; }
         
-        .touch-test { background: #16213e; padding: 15px; border-radius: 8px; margin: 10px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; }
+        .touch-test { background: #16213e; padding: 15px; border-radius: 8px; margin: 10px; font-family: monospace; font-size: 12px; max-height: 150px; overflow-y: auto; }
         
         #ws-status { position: fixed; bottom: 5px; right: 5px; font-size: 10px; color: #666; }
     </style>
@@ -91,7 +107,7 @@
         <div class="sec">
             <h3>Touch Test</h3>
             <p>Status: <span id="touch-status" style="color:red">Inte ansluten</span></p>
-            <p>Antal touches: <span id="touch-count">0</span></p>
+            <p>Antal: <span id="touch-count">0</span></p>
             <div id="touch-log" class="touch-test"></div>
         </div>
     </div>
@@ -103,14 +119,15 @@
         const maxCaptures = 10;
         let gameOn = false;
         let targets = [];
-        let touches = {}; let lastCheck = 0;;
-        let touchMaxX = 32600;  // Default max for touch device
-        let touchMaxY = 32600;
+        let touches = {};
+        let touchDots = {};
+        let lastCheck = 0;
+        const touchMaxX = 32600;
+        const touchMaxY = 32600;
         const gameEl = document.getElementById('game');
         
         function logTouch(msg) {
-            const log = document.getElementById('touch-log');
-            log.innerHTML = msg + '<br>' + log.innerHTML;
+            document.getElementById('touch-log').innerHTML = msg + '<br>' + document.getElementById('touch-log').innerHTML;
         }
         
         function updateBar() {
@@ -132,10 +149,8 @@
         function startGame() {
             gameOn = true;
             touches = {};
-            // Get game area size for coordinate scaling
-            touchMaxX = 32600;
-            touchMaxY = 32600;
-            logTouch('Game started, max: ' + touchMaxX + 'x' + touchMaxY);
+            Object.values(touchDots).forEach(d => d.remove());
+            touchDots = {};
             
             if (captures >= maxCaptures) { captures = 0; updateBar(); }
             for (let i = 0; i < 3; i++) setTimeout(() => spawn(), i * 100);
@@ -145,6 +160,8 @@
         function stopGame() {
             gameOn = false;
             touches = {};
+            Object.values(touchDots).forEach(d => d.remove());
+            touchDots = {};
             targets.forEach(t => t.el.remove());
             targets = [];
         }
@@ -164,9 +181,7 @@
             el.style.left = (Math.random() * (w - 90)) + 'px';
             el.style.top = (Math.random() * (h - 90)) + 'px';
             
-            el.onpointerdown = function(e) {
-                hitTarget(el);
-            };
+            el.onpointerdown = function(e) { hitTarget(el); };
             
             gameEl.appendChild(el);
             
@@ -184,7 +199,6 @@
             targets = targets.filter(x => x.el !== el);
             captures = Math.min(captures + 1, maxCaptures);
             updateBar();
-            logTouch('HIT! Total: ' + captures);
             spawn();
         }
         
@@ -204,11 +218,25 @@
             requestAnimationFrame(animate);
         }
         
-        // Scale raw touch coordinates to screen coordinates
         function scaleTouch(rawX, rawY) {
-            const screenX = (rawX / touchMaxX) * window.innerWidth;
-            const screenY = (rawY / touchMaxY) * window.innerHeight;
-            return { x: screenX, y: screenY };
+            return {
+                x: (rawX / touchMaxX) * window.innerWidth,
+                y: (rawY / touchMaxY) * window.innerHeight
+            };
+        }
+        
+        function updateTouchDot(slot, rawX, rawY) {
+            const scaled = scaleTouch(rawX, rawY);
+            
+            if (!touchDots[slot]) {
+                const dot = document.createElement('div');
+                dot.className = 'touch-dot';
+                document.body.appendChild(dot);
+                touchDots[slot] = dot;
+            }
+            
+            touchDots[slot].style.left = scaled.x + 'px';
+            touchDots[slot].style.top = scaled.y + 'px';
         }
         
         function checkHits() {
@@ -217,12 +245,9 @@
             const rect = gameEl.getBoundingClientRect();
             
             Object.values(touches).forEach(touch => {
-                // Scale coordinates
                 const scaled = scaleTouch(touch.x, touch.y);
                 const rx = scaled.x - rect.left;
                 const ry = scaled.y - rect.top;
-                
-                logTouch('Check: ' + Math.round(rx) + ',' + Math.round(ry));
                 
                 for (let i = targets.length - 1; i >= 0; i--) {
                     const t = targets[i];
@@ -235,7 +260,6 @@
             });
         }
         
-        // WebSocket
         let ws = null;
         
         function connectWS() {
@@ -245,35 +269,42 @@
                 document.getElementById('ws-status').textContent = 'Touch: 🟢';
                 document.getElementById('touch-status').textContent = 'Ansluten!';
                 document.getElementById('touch-status').style.color = '#2ecc71';
-                logTouch('WS connected');
             };
             
             ws.onmessage = function(event) {
                 try {
                     const data = JSON.parse(event.data);
-                    logTouch(data.type + ' slot:' + (data.slot !== undefined ? data.slot : '?'));
                     
                     if (data.type === 'touch_start') {
-                        const slot = data.slot || 0;
+                        const slot = data.slot !== undefined ? data.slot : 0;
                         touches[slot] = {x: data.x || 0, y: data.y || 0};
+                        updateTouchDot(slot, data.x || 0, data.y || 0);
                         document.getElementById('touch-count').textContent = Object.keys(touches).length;
                     }
                     else if (data.type === 'touch_move') {
-                        const slot = data.slot || 0;
+                        const slot = data.slot !== undefined ? data.slot : 0;
                         touches[slot] = {x: data.x, y: data.y};
+                        updateTouchDot(slot, data.x, data.y);
                         document.getElementById('touch-count').textContent = Object.keys(touches).length;
-                        if (data.type === 'touch_start' || Date.now() - lastCheck > 100) { checkHits(); lastCheck = Date.now(); }
+                        
+                        if (Date.now() - lastCheck > 100) {
+                            checkHits();
+                            lastCheck = Date.now();
+                        }
                     }
                     else if (data.type === 'touch_end') {
                         const keys = Object.keys(touches);
                         if (keys.length > 0) {
-                            delete touches[keys[0]];
+                            const removedSlot = keys[0];
+                            if (touchDots[removedSlot]) {
+                                touchDots[removedSlot].remove();
+                                delete touchDots[removedSlot];
+                            }
+                            delete touches[removedSlot];
                         }
                         document.getElementById('touch-count').textContent = Object.keys(touches).length;
                     }
-                } catch(e) {
-                    logTouch('Error: ' + e);
-                }
+                } catch(e) {}
             };
             
             ws.onclose = function() {
