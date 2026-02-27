@@ -40,29 +40,9 @@
         .sec { background: #16213e; padding: 20px; border-radius: 8px; margin: 10px; }
         .btn { padding: 15px 30px; background: #4ecca3; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin: 5px; }
         
-        /* Touch Test Styles */
-        .touch-test { 
-            background: #16213e; 
-            padding: 15px; 
-            border-radius: 8px; 
-            margin: 10px; 
-            font-family: monospace;
-            font-size: 12px;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        .touch-dot {
-            position: absolute;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: rgba(46, 204, 113, 0.5);
-            pointer-events: none;
-            transform: translate(-50%, -50%);
-        }
+        .touch-test { background: #16213e; padding: 15px; border-radius: 8px; margin: 10px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; }
         
         #ws-status { position: fixed; bottom: 5px; right: 5px; font-size: 10px; color: #666; }
-        #ws-status.connected { color: #2ecc71; }
     </style>
 </head>
 <body>
@@ -124,14 +104,13 @@
         let gameOn = false;
         let targets = [];
         let touches = {};
+        let touchMaxX = 32768;  // Default max for touch device
+        let touchMaxY = 32768;
         const gameEl = document.getElementById('game');
         
         function logTouch(msg) {
             const log = document.getElementById('touch-log');
             log.innerHTML = msg + '<br>' + log.innerHTML;
-            if (log.innerHTML.length > 2000) {
-                log.innerHTML = log.innerHTML.substring(0, 2000);
-            }
         }
         
         function updateBar() {
@@ -153,6 +132,11 @@
         function startGame() {
             gameOn = true;
             touches = {};
+            // Get game area size for coordinate scaling
+            touchMaxX = gameEl.clientWidth || 800;
+            touchMaxY = gameEl.clientHeight || 600;
+            logTouch('Game started, max: ' + touchMaxX + 'x' + touchMaxY);
+            
             if (captures >= maxCaptures) { captures = 0; updateBar(); }
             for (let i = 0; i < 3; i++) setTimeout(() => spawn(), i * 100);
             animate();
@@ -200,6 +184,7 @@
             targets = targets.filter(x => x.el !== el);
             captures = Math.min(captures + 1, maxCaptures);
             updateBar();
+            logTouch('HIT! Total: ' + captures);
             spawn();
         }
         
@@ -219,7 +204,38 @@
             requestAnimationFrame(animate);
         }
         
-        // WebSocket for touch
+        // Scale raw touch coordinates to screen coordinates
+        function scaleTouch(rawX, rawY) {
+            const screenX = (rawX / touchMaxX) * window.innerWidth;
+            const screenY = (rawY / touchMaxY) * window.innerHeight;
+            return { x: screenX, y: screenY };
+        }
+        
+        function checkHits() {
+            if (!gameOn || targets.length === 0) return;
+            
+            const rect = gameEl.getBoundingClientRect();
+            
+            Object.values(touches).forEach(touch => {
+                // Scale coordinates
+                const scaled = scaleTouch(touch.x, touch.y);
+                const rx = scaled.x - rect.left;
+                const ry = scaled.y - rect.top;
+                
+                logTouch('Check: ' + Math.round(rx) + ',' + Math.round(ry));
+                
+                for (let i = targets.length - 1; i >= 0; i--) {
+                    const t = targets[i];
+                    const dist = Math.sqrt((rx - t.x - 40) ** 2 + (ry - t.y - 40) ** 2);
+                    if (dist < 45) {
+                        hitTarget(t.el);
+                        return;
+                    }
+                }
+            });
+        }
+        
+        // WebSocket
         let ws = null;
         
         function connectWS() {
@@ -227,7 +243,6 @@
             
             ws.onopen = function() {
                 document.getElementById('ws-status').textContent = 'Touch: 🟢';
-                document.getElementById('ws-status').classList.add('connected');
                 document.getElementById('touch-status').textContent = 'Ansluten!';
                 document.getElementById('touch-status').style.color = '#2ecc71';
                 logTouch('WS connected');
@@ -236,12 +251,18 @@
             ws.onmessage = function(event) {
                 try {
                     const data = JSON.parse(event.data);
-                    logTouch(JSON.stringify(data));
+                    logTouch(data.type + ' slot:' + (data.slot || '?'));
                     
-                    if (data.type === 'touch_start' || data.type === 'touch_move') {
+                    if (data.type === 'touch_start') {
+                        const slot = data.slot || 0;
+                        touches[slot] = {x: data.x || 0, y: data.y || 0};
+                        document.getElementById('touch-count').textContent = Object.keys(touches).length;
+                    }
+                    else if (data.type === 'touch_move') {
                         const slot = data.slot || 0;
                         touches[slot] = {x: data.x, y: data.y};
                         document.getElementById('touch-count').textContent = Object.keys(touches).length;
+                        checkHits();
                     }
                     else if (data.type === 'touch_end') {
                         const keys = Object.keys(touches);
