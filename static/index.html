@@ -42,6 +42,9 @@
         
         .sec { background: #16213e; padding: 20px; border-radius: 8px; margin: 10px; }
         .btn { padding: 15px 30px; background: #4ecca3; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin: 5px; }
+        
+        #ws-status { position: fixed; bottom: 5px; right: 5px; font-size: 10px; color: #666; }
+        #ws-status.connected { color: #2ecc71; }
     </style>
 </head>
 <body>
@@ -88,13 +91,25 @@
             <button class="btn" onclick="wled('off')">Av</button>
         </div>
     </div>
+    
+    <div id="ws-status">Touch: 🔴</div>
 
     <script>
         let captures = 0;
         const maxCaptures = 10;
         let gameOn = false;
         let targets = [];
+        let activeTouches = new Map(); // touch_id -> {x, y}
         const gameEl = document.getElementById('game');
+        
+        // Screen dimensions for coordinate mapping
+        let screenWidth = window.innerWidth;
+        let screenHeight = window.innerHeight - 130;
+        
+        window.addEventListener('resize', () => {
+            screenWidth = window.innerWidth;
+            screenHeight = window.innerHeight - 130;
+        });
         
         function updateBar() {
             const pct = (captures / maxCaptures) * 100;
@@ -145,18 +160,9 @@
             el.style.left = (Math.random() * (w - 90)) + 'px';
             el.style.top = (Math.random() * (h - 90)) + 'px';
             
-            // Pointer event handler
+            // Regular click still works
             el.onpointerdown = function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                el.remove();
-                targets = targets.filter(x => x.el !== el);
-                
-                captures = Math.min(captures + 1, maxCaptures);
-                updateBar();
-                
-                spawn();
+                handleHit(el);
             };
             
             gameEl.appendChild(el);
@@ -168,6 +174,16 @@
                 vx: (Math.random() - 0.5) * 2,
                 vy: (Math.random() - 0.5) * 2
             });
+        }
+        
+        function handleHit(el) {
+            el.remove();
+            targets = targets.filter(x => x.el !== el);
+            
+            captures = Math.min(captures + 1, maxCaptures);
+            updateBar();
+            
+            spawn();
         }
         
         function animate() {
@@ -189,6 +205,72 @@
             
             requestAnimationFrame(animate);
         }
+        
+        // Check touch collision with targets
+        function checkTouchHit(x, y) {
+            const gameRect = gameEl.getBoundingClientRect();
+            const relX = x - gameRect.left;
+            const relY = y - gameRect.top;
+            
+            for (let i = targets.length - 1; i >= 0; i--) {
+                const t = targets[i];
+                const tx = t.x;
+                const ty = t.y;
+                const dist = Math.sqrt((relX - tx - 40) ** 2 + (relY - ty - 40) ** 2);
+                
+                if (dist < 45) { // 40 + 5 margin
+                    handleHit(t.el);
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        // WebSocket connection for touch input
+        let ws = null;
+        
+        function connectTouch() {
+            try {
+                ws = new WebSocket('ws://localhost:8765');
+                
+                ws.onopen = () => {
+                    document.getElementById('ws-status').textContent = 'Touch: 🟢';
+                    document.getElementById('ws-status').classList.add('connected');
+                    console.log('Touch WebSocket connected');
+                };
+                
+                ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        handleTouchEvent(data);
+                    } catch(e) {}
+                };
+                
+                ws.onclose = () => {
+                    document.getElementById('ws-status').textContent = 'Touch: 🔴';
+                    document.getElementById('ws-status').classList.remove('connected');
+                    console.log('Touch WS disconnected, reconnecting...');
+                    setTimeout(connectTouch, 2000);
+                };
+                
+                ws.onerror = (e) => {
+                    console.log('Touch WS error');
+                };
+            } catch(e) {
+                console.log('WS connect error:', e);
+                setTimeout(connectTouch, 2000);
+            }
+        }
+        
+        function handleTouchEvent(data) {
+            if (data.type === 'touch_move' && gameOn) {
+                // Check if this touch hits a target
+                checkTouchHit(data.x, data.y);
+            }
+        }
+        
+        // Start WebSocket connection
+        connectTouch();
         
         async function feed(g) {
             try {
