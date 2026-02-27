@@ -40,9 +40,29 @@
         .sec { background: #16213e; padding: 20px; border-radius: 8px; margin: 10px; }
         .btn { padding: 15px 30px; background: #4ecca3; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin: 5px; }
         
+        /* Touch Test Styles */
+        .touch-test { 
+            background: #16213e; 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin: 10px; 
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .touch-dot {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(46, 204, 113, 0.5);
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+        }
+        
         #ws-status { position: fixed; bottom: 5px; right: 5px; font-size: 10px; color: #666; }
         #ws-status.connected { color: #2ecc71; }
-        #debug { position: fixed; bottom: 20px; left: 5px; font-size: 10px; color: #888; }
     </style>
 </head>
 <body>
@@ -88,21 +108,30 @@
             <button class="btn" onclick="wled('rainbow')">Regnbåge</button>
             <button class="btn" onclick="wled('off')">Av</button>
         </div>
+        <div class="sec">
+            <h3>Touch Test</h3>
+            <p>Status: <span id="touch-status" style="color:red">Inte ansluten</span></p>
+            <p>Antal touches: <span id="touch-count">0</span></p>
+            <div id="touch-log" class="touch-test"></div>
+        </div>
     </div>
     
     <div id="ws-status">Touch: 🔴</div>
-    <div id="debug"></div>
 
     <script>
         let captures = 0;
         const maxCaptures = 10;
         let gameOn = false;
         let targets = [];
-        let touches = {};  // Key = touch ID, Value = {x, y}
+        let touches = {};
         const gameEl = document.getElementById('game');
         
-        function log(msg) {
-            document.getElementById('debug').innerText = msg;
+        function logTouch(msg) {
+            const log = document.getElementById('touch-log');
+            log.innerHTML = msg + '<br>' + log.innerHTML;
+            if (log.innerHTML.length > 2000) {
+                log.innerHTML = log.innerHTML.substring(0, 2000);
+            }
         }
         
         function updateBar() {
@@ -190,29 +219,7 @@
             requestAnimationFrame(animate);
         }
         
-        // Check all touches against all targets
-        function checkHits() {
-            if (!gameOn || targets.length === 0) return;
-            
-            const rect = gameEl.getBoundingClientRect();
-            
-            // Check each touch
-            Object.values(touches).forEach(touch => {
-                const rx = touch.x - rect.left;
-                const ry = touch.y - rect.top;
-                
-                for (let i = targets.length - 1; i >= 0; i--) {
-                    const t = targets[i];
-                    const dist = Math.sqrt((rx - t.x - 40) ** 2 + (ry - t.y - 40) ** 2);
-                    if (dist < 45) {
-                        hitTarget(t.el);
-                        return; // One hit per touch
-                    }
-                }
-            });
-        }
-        
-        // WebSocket
+        // WebSocket for touch
         let ws = null;
         
         function connectWS() {
@@ -221,37 +228,37 @@
             ws.onopen = function() {
                 document.getElementById('ws-status').textContent = 'Touch: 🟢';
                 document.getElementById('ws-status').classList.add('connected');
+                document.getElementById('touch-status').textContent = 'Ansluten!';
+                document.getElementById('touch-status').style.color = '#2ecc71';
+                logTouch('WS connected');
             };
             
             ws.onmessage = function(event) {
                 try {
                     const data = JSON.parse(event.data);
+                    logTouch(JSON.stringify(data));
                     
-                    if (data.type === 'touch_start' && typeof data.slot !== 'undefined') {
-                        // New touch
-                        touches[data.slot] = {x: data.x || 0, y: data.y || 0};
-                    }
-                    else if (data.type === 'touch_move' && typeof data.slot !== 'undefined') {
-                        // Update position
-                        touches[data.slot] = {x: data.x, y: data.y};
-                        // Check hits
-                        checkHits();
+                    if (data.type === 'touch_start' || data.type === 'touch_move') {
+                        const slot = data.slot || 0;
+                        touches[slot] = {x: data.x, y: data.y};
+                        document.getElementById('touch-count').textContent = Object.keys(touches).length;
                     }
                     else if (data.type === 'touch_end') {
-                        // Remove oldest touch
                         const keys = Object.keys(touches);
                         if (keys.length > 0) {
                             delete touches[keys[0]];
                         }
+                        document.getElementById('touch-count').textContent = Object.keys(touches).length;
                     }
-                    
-                    // Debug: show touch count
-                    log('Touches: ' + Object.keys(touches).length);
-                } catch(e) {}
+                } catch(e) {
+                    logTouch('Error: ' + e);
+                }
             };
             
             ws.onclose = function() {
                 document.getElementById('ws-status').textContent = 'Touch: 🔴';
+                document.getElementById('touch-status').textContent = 'Frånkopplad';
+                document.getElementById('touch-status').style.color = 'red';
                 setTimeout(connectWS, 2000);
             };
         }
