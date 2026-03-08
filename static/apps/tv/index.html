@@ -1,74 +1,83 @@
-<!-- TV App - YouTube Video Player -->
-<div class="app-content" style="padding: 0; margin: 0; height: 100%;">
-    <div id="player-wrapper" style="width: 100%; height: 100%; position: relative;">
-        <div id="player"></div>
-    </div>
+<!-- TV App - YouTube Videos for Parrots -->
+<div id="tv-app" style="width: 100%; height: calc(100vh - 80px); position: relative; overflow: hidden;">
+    <!-- YouTube Player Container - plays directly on open -->
+    <div id="youtube-player" style="width: 100%; height: 100%; pointer-events: none;"></div>
 </div>
 
 <script>
-    // YouTube player variable
-    var player;
+(function() {
+    // Singing parrots video - auto-plays and loops
+    const videoConfig = {
+        videoId: '7WL9Orh7auA' // Parrots & Cockatiels Singing Hit Songs COMPILATION
+    };
     
-    // Video ID - "singing parrots" related content
-    // Using a popular parrot singing video
-    var videoId = 'MlD2eN0KcFk'; // Parrots singing and dancing
+    let player = null;
     
     // Load YouTube IFrame API
-    var tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
-    var firstScriptTag = document.getElementsByTagName('script')[0];
-    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    function loadYouTubeAPI() {
+        if (window.YT && window.YT.Player) {
+            return Promise.resolve();
+        }
+        return new Promise((resolve) => {
+            const tag = document.createElement('script');
+            tag.src = 'https://www.youtube.com/iframe_api';
+            const firstScriptTag = document.getElementsByTagName('script')[0];
+            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+            window.onYouTubeIframeAPIReady = () => {
+                resolve();
+            };
+        });
+    }
     
-    // API ready callback
-    function onYouTubeIframeAPIReady() {
-        player = new YT.Player('player', {
+    // Create YouTube player
+    function createPlayer() {
+        const playerContainer = document.getElementById('youtube-player');
+        
+        // Clear previous player
+        playerContainer.innerHTML = '<div id="yt-player" style="width: 100%; height: 100%; pointer-events: none;"></div>';
+        
+        player = new YT.Player('yt-player', {
             height: '100%',
             width: '100%',
-            videoId: videoId,
+            videoId: videoConfig.videoId,
             playerVars: {
-                'autoplay': 1,
-                'controls': 0,
-                'rel': 0,
-                'showinfo': 0,
-                'modestbranding': 1,
-                'playsinline': 1,
-                'loop': 1,
-                'playlist': videoId,
-                'enablejsapi': 1,
-                'origin': window.location.origin
+                autoplay: 1,
+                controls: 0,
+                disablekb: 1,
+                fs: 0,
+                iv_load_policy: 3,
+                loop: 1,
+                modestbranding: 1,
+                playsinline: 1,
+                rel: 0,
+                showinfo: 0,
+                playlist: videoConfig.videoId // Required for loop to work
             },
             events: {
-                'onReady': onPlayerReady,
-                'onStateChange': onPlayerStateChange
+                onReady: (event) => {
+                    event.target.playVideo();
+                },
+                onStateChange: (event) => {
+                    // Loop video when it ends
+                    if (event.data === YT.PlayerState.ENDED) {
+                        event.target.playVideo();
+                    }
+                },
+                onError: (event) => {
+                    console.error('YouTube Player Error:', event.data);
+                }
             }
         });
     }
     
-    function onPlayerReady(event) {
-        // Try to unmute and play
-        try {
-            player.unMute();
-            player.setVolume(80);
-        } catch(e) {
-            console.log('Autoplay may be blocked, trying muted');
-        }
-    }
-    
-    function onPlayerStateChange(event) {
-        // Loop video when it ends
-        if (event.data === YT.PlayerState.ENDED) {
-            player.seekTo(0);
-            player.playVideo();
-        }
-    }
-    
-    // Prevent clicking on iframe from opening new tab
-    document.getElementById('player-wrapper').addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
+    // Initialize player immediately
+    loadYouTubeAPI().then(() => {
+        createPlayer();
     });
     
-    // Also add pointer-events to prevent link navigation
-    document.getElementById('player').style.pointerEvents = 'none';
+    // Set TV LED effect when entering the app
+    if (window.ParrotOS && window.ParrotOS.led && window.ParrotOS.led.setEffect) {
+        ParrotOS.led.setEffect('tv');
+    }
+})();
 </script>
