@@ -124,19 +124,28 @@
         <div id="loading" class="loading">Laddar...</div>
     </div>
 
-    <script src="/static/js/router.js"></script>
-    <script src="/static/js/nav.js"></script>
-    <script src="/static/js/integrations/feeder.js"></script>
-    <script src="/static/js/integrations/led.js"></script>
     <script>
-        // ParrotOS Global Namespace
+        // ParrotOS Global Namespace - DEFINED FIRST
         window.ParrotOS = {
             apps: [],
             currentApp: null,
             timeoutId: null,
-            config: {}
+            config: {},
+            router: {},
+            nav: {},
+            feeder: {},
+            led: {},
+            camera: {}
         };
-
+    </script>
+    
+    <script src="/static/js/router.js"></script>
+    <script src="/static/js/nav.js"></script>
+    <script src="/static/js/integrations/feeder.js"></script>
+    <script src="/static/js/integrations/led.js"></script>
+    <script src="/static/js/integrations/camera.js"></script>
+    
+    <script>
         // Initialize on load
         document.addEventListener('DOMContentLoaded', async () => {
             try {
