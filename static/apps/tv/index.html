@@ -1,14 +1,28 @@
 <!-- TV App - YouTube Videos for Parrots -->
-<div id="tv-app" style="width: 100%; height: calc(100vh - 80px); position: relative; overflow: hidden;">
+<div id="tv-app" style="width: 100%; height: calc(100vh - 120px); position: relative; overflow: hidden; background: #000;">
     <!-- YouTube Player Container - plays directly on open -->
-    <div id="youtube-player" style="width: 100%; height: 100%; pointer-events: none;"></div>
+    <div id="youtube-player" style="width: 100%; height: 100%;"></div>
 </div>
 
 <script>
 (function() {
-    // Relaxing bird sounds video - auto-plays and loops
+    // List of working bird/parrot videos - randomly selected each time
+    const videoIds = [
+        'CqXeTN-xkm0',  // Relaxing Bird Sounds 4K
+        'vJG62OtQePw',  // 15 hours! How To Calm A Parrot
+        'on8yvfx_Vuo',  // Relaxing Music For Birds (5 hrs)
+        '8bHObbpndA0',  // Funny Parrots Singing and Dancing
+        'O6LGZIq-Mt0',  // Comedian Parrot Dances And Sings
+        '7DdaNNQxAcI',  // Funny Parrots Singing
+        'C5iJn3K7zE4',  // Parrot Playing and Singing
+        'Pfo6UyneTmE',  // Cockatiel Singing and Dancing
+    ];
+    
+    // Pick random video each time
+    const videoId = videoIds[Math.floor(Math.random() * videoIds.length)];
+    
     const videoConfig = {
-        videoId: 'CqXeTN-xkm0' // Relaxing Bird Sounds 4K
+        videoId: videoId
     };
     
     let player = null;
@@ -28,56 +42,55 @@
             };
         });
     }
-    
-    // Create YouTube player
-    function createPlayer() {
-        const playerContainer = document.getElementById('youtube-player');
+
+    // Initialize player
+    async function initPlayer() {
+        await loadYouTubeAPI();
         
-        // Clear previous player
-        playerContainer.innerHTML = '<div id="yt-player" style="width: 100%; height: 100%; pointer-events: none;"></div>';
-        
-        player = new YT.Player('yt-player', {
-            height: '100%',
-            width: '100%',
+        player = new YT.Player('youtube-player', {
             videoId: videoConfig.videoId,
             playerVars: {
-                autoplay: 1,
-                controls: 0,
-                disablekb: 1,
-                fs: 0,
-                iv_load_policy: 3,
-                loop: 1,
-                modestbranding: 1,
-                playsinline: 1,
-                rel: 0,
-                showinfo: 0,
-                playlist: videoConfig.videoId // Required for loop to work
+                'autoplay': 1,
+                'controls': 0,
+                'rel': 0,
+                'showinfo': 0,
+                'modestbranding': 1,
+                'playsinline': 1,
+                'loop': 1,
+                'playlist': videoConfig.videoId,
+                'fs': 0,
+                'disablekb': 1,
+                'origin': window.location.origin
             },
             events: {
-                onReady: (event) => {
-                    event.target.playVideo();
-                },
-                onStateChange: (event) => {
-                    // Loop video when it ends
-                    if (event.data === YT.PlayerState.ENDED) {
-                        event.target.playVideo();
-                    }
-                },
-                onError: (event) => {
-                    console.error('YouTube Player Error:', event.data);
-                }
+                'onReady': onPlayerReady,
+                'onStateChange': onPlayerStateChange
             }
         });
     }
     
-    // Initialize player immediately
-    loadYouTubeAPI().then(() => {
-        createPlayer();
-    });
-    
-    // Set TV LED effect when entering the app
-    if (window.ParrotOS && window.ParrotOS.led && window.ParrotOS.led.setEffect) {
-        ParrotOS.led.setEffect('tv');
+    function onPlayerReady(event) {
+        // Try to unmute for autoplay
+        try {
+            player.unMute();
+            player.setVolume(80);
+        } catch(e) {
+            console.log('Autoplay blocked, muted');
+        }
     }
+    
+    function onPlayerStateChange(event) {
+        // Loop when video ends
+        if (event.data === YT.PlayerState.ENDED) {
+            player.seekTo(0);
+            player.playVideo();
+        }
+    }
+    
+    // Prevent clicking to open new tab
+    document.getElementById('youtube-player').style.pointerEvents = 'none';
+    
+    // Initialize
+    initPlayer();
 })();
 </script>
