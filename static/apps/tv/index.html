@@ -1,209 +1,74 @@
-<!-- TV App - YouTube Videos for Parrots -->
-<div id="tv-app" style="width: 100%; height: calc(100vh - 80px); position: relative; overflow: hidden;">
-    <!-- Category Selection Screen -->
-    <div id="category-screen" style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box;">
-        <h2 style="color: #778da9; margin-bottom: 30px; font-size: 24px;">Välj kategori</h2>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; max-width: 500px;">
-            <button class="tv-category-btn" data-category="natur" style="
-                padding: 30px 20px;
-                font-size: 20px;
-                background: linear-gradient(135deg, #2d6a4f, #40916c);
-                color: white;
-                border: none;
-                border-radius: 15px;
-                cursor: pointer;
-                transition: transform 0.2s, box-shadow 0.2s;
-            ">🌿<br>Natur</button>
-            <button class="tv-category-btn" data-category="musik" style="
-                padding: 30px 20px;
-                font-size: 20px;
-                background: linear-gradient(135deg, #5a189a, #7b2cbf);
-                color: white;
-                border: none;
-                border-radius: 15px;
-                cursor: pointer;
-                transition: transform 0.2s, box-shadow 0.2s;
-            ">🎵<br>Musik</button>
-            <button class="tv-category-btn" data-category="farg" style="
-                padding: 30px 20px;
-                font-size: 20px;
-                background: linear-gradient(135deg, #e85d04, #f48c06);
-                color: white;
-                border: none;
-                border-radius: 15px;
-                cursor: pointer;
-                transition: transform 0.2s, box-shadow 0.2s;
-            ">🎨<br>Färg</button>
-            <button class="tv-category-btn" data-category="parrottown" style="
-                padding: 30px 20px;
-                font-size: 20px;
-                background: linear-gradient(135deg, #0077b6, #00b4d8);
-                color: white;
-                border: none;
-                border-radius: 15px;
-                cursor: pointer;
-                transition: transform 0.2s, box-shadow 0.2s;
-            ">🦜<br>Parrot Town</button>
-        </div>
-    </div>
-    
-    <!-- Video Player Screen (hidden by default) -->
-    <div id="player-screen" style="width: 100%; height: 100%; display: none; position: relative;">
-        <!-- Back Button -->
-        <button id="back-btn" style="
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            z-index: 100;
-            padding: 10px 20px;
-            font-size: 16px;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            backdrop-filter: blur(5px);
-        ">← Tillbaka</button>
-        
-        <!-- YouTube Player Container -->
-        <div id="youtube-player" style="width: 100%; height: 100%;"></div>
+<!-- TV App - YouTube Video Player -->
+<div class="app-content" style="padding: 0; margin: 0; height: 100%;">
+    <div id="player-wrapper" style="width: 100%; height: 100%; position: relative;">
+        <div id="player"></div>
     </div>
 </div>
 
-<style>
-.tv-category-btn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
-}
-
-.tv-category-btn:active {
-    transform: scale(0.98);
-}
-</style>
-
 <script>
-(function() {
-    // Video IDs for each category
-    const categories = {
-        natur: {
-            videoId: 'dQw4w9WgXcQ', // Placeholder - will use channel uploads
-            playlistId: 'UUVtdo4OmU52nCGX9NcOesAw', // Parrot Town TV channel uploads
-            usePlaylist: true
-        },
-        musik: {
-            videoId: 'on8yvfx_Vuo', // Relaxing Music For Birds - 5 hrs
-            usePlaylist: false
-        },
-        farg: {
-            videoId: 'vJG62OtQePw', // Calm Parrot - 15 hrs
-            usePlaylist: false
-        },
-        parrottown: {
-            videoId: 'dQw4w9WgXcQ', // Placeholder
-            playlistId: 'UUVtdo4OmU52nCGX9NcOesAw', // Parrot Town TV channel uploads
-            usePlaylist: true
-        }
-    };
+    // YouTube player variable
+    var player;
     
-    let player = null;
-    let playerReady = false;
+    // Video ID - "singing parrots" related content
+    // Using a popular parrot singing video
+    var videoId = 'MlD2eN0KcFk'; // Parrots singing and dancing
     
     // Load YouTube IFrame API
-    function loadYouTubeAPI() {
-        if (window.YT && window.YT.Player) {
-            return Promise.resolve();
-        }
-        return new Promise((resolve) => {
-            const tag = document.createElement('script');
-            tag.src = 'https://www.youtube.com/iframe_api';
-            const firstScriptTag = document.getElementsByTagName('script')[0];
-            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-            window.onYouTubeIframeAPIReady = () => {
-                resolve();
-            };
-        });
-    }
+    var tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    var firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
     
-    // Create YouTube player
-    function createPlayer(category) {
-        const config = categories[category];
-        const playerContainer = document.getElementById('youtube-player');
-        
-        // Clear previous player
-        playerContainer.innerHTML = '<div id="yt-player" style="width: 100%; height: 100%;"></div>';
-        
-        player = new YT.Player('yt-player', {
+    // API ready callback
+    function onYouTubeIframeAPIReady() {
+        player = new YT.Player('player', {
             height: '100%',
             width: '100%',
-            videoId: config.usePlaylist ? undefined : config.videoId,
+            videoId: videoId,
             playerVars: {
-                autoplay: 1,
-                controls: 0,
-                disablekb: 1,
-                fs: 0,
-                iv_load_policy: 3,
-                loop: 1,
-                modestbranding: 1,
-                playsinline: 1,
-                rel: 0,
-                showinfo: 0,
-                list: config.usePlaylist ? config.playlistId : undefined,
-                listType: config.usePlaylist ? 'playlist' : undefined
+                'autoplay': 1,
+                'controls': 0,
+                'rel': 0,
+                'showinfo': 0,
+                'modestbranding': 1,
+                'playsinline': 1,
+                'loop': 1,
+                'playlist': videoId,
+                'enablejsapi': 1,
+                'origin': window.location.origin
             },
             events: {
-                onReady: (event) => {
-                    playerReady = true;
-                    event.target.playVideo();
-                },
-                onStateChange: (event) => {
-                    // Loop video when it ends
-                    if (event.data === YT.PlayerState.ENDED) {
-                        event.target.playVideo();
-                    }
-                },
-                onError: (event) => {
-                    console.error('YouTube Player Error:', event.data);
-                }
+                'onReady': onPlayerReady,
+                'onStateChange': onPlayerStateChange
             }
         });
     }
     
-    // Show category screen
-    function showCategoryScreen() {
-        document.getElementById('category-screen').style.display = 'flex';
-        document.getElementById('player-screen').style.display = 'none';
-        
-        // Destroy player to save resources
-        if (player) {
-            player.destroy();
-            player = null;
-            playerReady = false;
+    function onPlayerReady(event) {
+        // Try to unmute and play
+        try {
+            player.unMute();
+            player.setVolume(80);
+        } catch(e) {
+            console.log('Autoplay may be blocked, trying muted');
         }
     }
     
-    // Show player screen
-    function showPlayerScreen(category) {
-        document.getElementById('category-screen').style.display = 'none';
-        document.getElementById('player-screen').style.display = 'block';
-        
-        loadYouTubeAPI().then(() => {
-            createPlayer(category);
-        });
+    function onPlayerStateChange(event) {
+        // Loop video when it ends
+        if (event.data === YT.PlayerState.ENDED) {
+            player.seekTo(0);
+            player.playVideo();
+        }
     }
     
-    // Event listeners
-    document.querySelectorAll('.tv-category-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const category = btn.dataset.category;
-            showPlayerScreen(category);
-        });
+    // Prevent clicking on iframe from opening new tab
+    document.getElementById('player-wrapper').addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
     });
     
-    document.getElementById('back-btn').addEventListener('click', showCategoryScreen);
-    
-    // Set TV LED effect when entering the app
-    if (window.ParrotOS && window.ParrotOS.led && window.ParrotOS.led.setEffect) {
-        ParrotOS.led.setEffect('tv');
-    }
-})();
+    // Also add pointer-events to prevent link navigation
+    document.getElementById('player').style.pointerEvents = 'none';
 </script>
