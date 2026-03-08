@@ -1,96 +1,30 @@
-<!-- TV App - YouTube Videos for Parrots -->
+<!-- TV App - YouTube Playlist for Parrots -->
 <div id="tv-app" style="width: 100%; height: calc(100vh - 120px); position: relative; overflow: hidden; background: #000;">
-    <!-- YouTube Player Container - plays directly on open -->
-    <div id="youtube-player" style="width: 100%; height: 100%;"></div>
+    <iframe 
+        id="youtube-frame"
+        style="width: 100%; height: 100%; border: none;"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+        allowfullscreen
+        loading="lazy">
+    </iframe>
 </div>
 
 <script>
 (function() {
-    // List of working bird/parrot videos - randomly selected each time
-    const videoIds = [
-        'CqXeTN-xkm0',  // Relaxing Bird Sounds 4K
-        'vJG62OtQePw',  // 15 hours! How To Calm A Parrot
-        'on8yvfx_Vuo',  // Relaxing Music For Birds (5 hrs)
-        '8bHObbpndA0',  // Funny Parrots Singing and Dancing
-        'O6LGZIq-Mt0',  // Comedian Parrot Dances And Sings
-        '7DdaNNQxAcI',  // Funny Parrots Singing
-        'C5iJn3K7zE4',  // Parrot Playing and Singing
-        'Pfo6UyneTmE',  // Cockatiel Singing and Dancing
-    ];
+    // YouTube playlist with bird/parrot content - auto-plays and cycles through videos
+    // Parrot Town TV Good Vibes playlist
+    const playlistId = 'PLBV9v5mFzsjdZB8tQZF_E4NUnrPhYnm-F';
     
-    // Pick random video each time
-    const videoId = videoIds[Math.floor(Math.random() * videoIds.length)];
+    // Build playlist embed URL with autoplay
+    const embedUrl = `https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1&loop=1&controls=0&showinfo=0&modestbranding=1&rel=0&fs=0&disablekb=1&playsinline=1`;
     
-    const videoConfig = {
-        videoId: videoId
-    };
+    // Set the iframe src
+    document.getElementById('youtube-frame').src = embedUrl;
     
-    let player = null;
-    
-    // Load YouTube IFrame API
-    function loadYouTubeAPI() {
-        if (window.YT && window.YT.Player) {
-            return Promise.resolve();
-        }
-        return new Promise((resolve) => {
-            const tag = document.createElement('script');
-            tag.src = 'https://www.youtube.com/iframe_api';
-            const firstScriptTag = document.getElementsByTagName('script')[0];
-            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-            window.onYouTubeIframeAPIReady = () => {
-                resolve();
-            };
-        });
-    }
-
-    // Initialize player
-    async function initPlayer() {
-        await loadYouTubeAPI();
-        
-        player = new YT.Player('youtube-player', {
-            videoId: videoConfig.videoId,
-            playerVars: {
-                'autoplay': 1,
-                'controls': 0,
-                'rel': 0,
-                'showinfo': 0,
-                'modestbranding': 1,
-                'playsinline': 1,
-                'loop': 1,
-                'playlist': videoConfig.videoId,
-                'fs': 0,
-                'disablekb': 1,
-                'origin': window.location.origin
-            },
-            events: {
-                'onReady': onPlayerReady,
-                'onStateChange': onPlayerStateChange
-            }
-        });
-    }
-    
-    function onPlayerReady(event) {
-        // Try to unmute for autoplay
-        try {
-            player.unMute();
-            player.setVolume(80);
-        } catch(e) {
-            console.log('Autoplay blocked, muted');
-        }
-    }
-    
-    function onPlayerStateChange(event) {
-        // Loop when video ends
-        if (event.data === YT.PlayerState.ENDED) {
-            player.seekTo(0);
-            player.playVideo();
-        }
-    }
-    
-    // Prevent clicking to open new tab
-    document.getElementById('youtube-player').style.pointerEvents = 'none';
-    
-    // Initialize
-    initPlayer();
+    // Prevent clicking to open in new tab
+    document.getElementById('youtube-frame').addEventListener('click', function(e) {
+        e.preventDefault();
+        return false;
+    });
 })();
 </script>
