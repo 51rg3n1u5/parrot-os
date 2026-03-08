@@ -36,25 +36,16 @@ ParrotOS.router = {
             const appData = await res.json();
             
             // Skapa app container
-            const wrapper = document.createElement('div');
-            wrapper.id = `app-${appId}`;
-            wrapper.className = 'app-wrapper';
-            wrapper.innerHTML = appData.html || '';
+            container.innerHTML = `
+                <div id="app-${appId}" class="app-wrapper">
+                    ${appData.html || ''}
+                </div>
+            `;
             
-            // Clear container and append new wrapper
-            container.innerHTML = '';
-            container.appendChild(wrapper);
-            
-            // Execute any script tags inside the app
-            wrapper.querySelectorAll('script').forEach(oldScript => {
-                const newScript = document.createElement('script');
-                if (oldScript.src) {
-                    newScript.src = oldScript.src;
-                } else {
-                    newScript.textContent = oldScript.textContent;
-                }
-                oldScript.parentNode.replaceChild(newScript, oldScript);
-            });
+            // Kör app-initialisering om den finns
+            if (appData.js) {
+                eval(appData.js);
+            }
             
             // Spara current app
             this.currentApp = appId;

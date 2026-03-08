@@ -1,33 +1,264 @@
-<!-- Game App -->
-<div class="app-content">
-    <h1>🎲 Lek</h1>
-    <p style="margin: 20px 0;">Fånga belöningar!</p>
-    
-    <div id="game-area" style="position: relative; width: 300px; height: 400px; background: #0d1b2a; border-radius: 12px; margin: 20px auto;">
-        <!-- Game elements will be added here -->
-    </div>
-    
-    <p style="color: #778da9;">Tryck på sakerna som dyker upp!</p>
+<!-- Game App - Fånga belöningar -->
+<div id="game-page" class="app-content" style="position: relative; background: #0d1b2a; width: 100%; height: 100%;">
+    <!-- Targets will be spawned here -->
 </div>
+
+<style>
+#game-page .target {
+    position: absolute; 
+    width: 80px; 
+    height: 80px;
+    border-radius: 50%; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    font-size: 40px; 
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+#game-page .target:active {
+    transform: scale(0.9);
+}
+#game-page .food { background: linear-gradient(#f39c12, #e74c3c); }
+#game-page .toy { background: linear-gradient(#9b59b6, #3498db); }
+#game-page .fruit { background: linear-gradient(#2ecc71, #27ae60); }
+
+#game-page .touch-dot {
+    position: fixed;
+    width: 50px; 
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(46, 204, 113, 0.6);
+    border: 3px solid #2ecc71;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    animation: appear 0.2s ease-out, fadeout 1s 1s forwards;
+    z-index: 1000;
+}
+@keyframes appear {
+    0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+@keyframes fadeout {
+    to { opacity: 0; }
+}
+
+#game-page .score-display {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 52, 96, 0.9);
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 18px;
+    color: #4ecca3;
+    z-index: 100;
+}
+</style>
 
 <script>
 (function() {
-    const area = document.getElementById('game-area');
-    let score = 0;
-    let gameActive = false;
+    const gameEl = document.getElementById('game-page');
+    let captures = 0;
+    const maxCaptures = 10;
+    let gameOn = true;
     let targets = [];
+    let touches = {};
+    let touchDots = {};
+    let lastCheck = 0;
+    const touchMaxX = 32600;
+    const touchMaxY = 32600;
+    let ws = null;
+    let animFrame = null;
     
-    // Simplified game - just a placeholder for now
-    area.innerHTML = `
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
-            <span style="font-size: 60px;">🎮</span>
-            <p style="margin-top: 20px;">Spelet kommer snart!</p>
-            <button class="btn btn-primary" style="margin-top: 20px;" onclick="startDemo()">Test</button>
-        </div>
-    `;
+    // Create score display
+    const scoreDisplay = document.createElement('div');
+    scoreDisplay.className = 'score-display';
+    scoreDisplay.innerHTML = '🎯 Fångster: <span id="game-captures">0</span>/10';
+    gameEl.appendChild(scoreDisplay);
     
-    window.startDemo = function() {
-        alert('Game demo: ' + ParrotOS.feeder.dispense(5));
+    function updateScore() {
+        const el = document.getElementById('game-captures');
+        if (el) el.textContent = captures;
+    }
+    
+    function spawn() {
+        if (!gameOn) return;
+        const types = [{c:'food',e:'🌰'},{c:'toy',e:'🧸'},{c:'fruit',e:'🍎'}];
+        const t = types[Math.floor(Math.random() * types.length)];
+        
+        const el = document.createElement('div');
+        el.className = 'target ' + t.c;
+        el.textContent = t.e;
+        
+        const w = gameEl.clientWidth || 300;
+        const h = gameEl.clientHeight || 400;
+        
+        el.style.left = (Math.random() * (w - 90)) + 'px';
+        el.style.top = (Math.random() * (h - 90) + 50) + 'px';
+        
+        el.onpointerdown = function(e) { hitTarget(el); };
+        
+        gameEl.appendChild(el);
+        
+        targets.push({
+            el: el,
+            x: parseFloat(el.style.left),
+            y: parseFloat(el.style.top),
+            vx: (Math.random() - 0.5) * 2,
+            vy: (Math.random() - 0.5) * 2
+        });
+    }
+    
+    function hitTarget(el) {
+        el.remove();
+        targets = targets.filter(x => x.el !== el);
+        captures = Math.min(captures + 1, maxCaptures);
+        updateScore();
+        
+        if (captures >= maxCaptures) {
+            // Bonus earned!
+            fetch('/api/game/score?points=1', {method: 'POST'});
+            captures = 0;
+        }
+        
+        spawn();
+    }
+    
+    function animate() {
+        if (!gameOn) return;
+        const w = gameEl.clientWidth || 300;
+        const h = gameEl.clientHeight || 400;
+        
+        targets.forEach(t => {
+            t.x += t.vx;
+            t.y += t.vy;
+            if (t.x <= 0 || t.x >= w - 90) { t.vx *= -1; t.x = Math.max(0, Math.min(t.x, w - 90)); }
+            if (t.y <= 50 || t.y >= h - 90) { t.vy *= -1; t.y = Math.max(50, Math.min(t.y, h - 90)); }
+            t.el.style.left = t.x + 'px';
+            t.el.style.top = t.y + 'px';
+        });
+        animFrame = requestAnimationFrame(animate);
+    }
+    
+    // Start game
+    for (let i = 0; i < 3; i++) setTimeout(() => spawn(), i * 100);
+    animate();
+    
+    // Touch input via WebSocket
+    function scaleTouch(rawX, rawY) {
+        return {
+            x: (rawX / touchMaxX) * window.innerWidth,
+            y: (rawY / touchMaxY) * window.innerHeight
+        };
+    }
+    
+    function createTouchDot(slot, rawX, rawY) {
+        const scaled = scaleTouch(rawX, rawY);
+        
+        const dot = document.createElement('div');
+        dot.className = 'touch-dot';
+        dot.style.left = scaled.x + 'px';
+        dot.style.top = scaled.y + 'px';
+        gameEl.appendChild(dot);
+        touchDots[slot] = dot;
+        
+        // Remove touch dot after 2 seconds (like old version)
+        setTimeout(() => {
+            if (touchDots[slot]) {
+                touchDots[slot].remove();
+                delete touchDots[slot];
+            }
+        }, 2000);
+    }
+    
+    function updateTouchDot(slot, rawX, rawY) {
+        if (!touchDots[slot]) {
+            createTouchDot(slot, rawX, rawY);
+            return;
+        }
+        
+        const scaled = scaleTouch(rawX, rawY);
+        touchDots[slot].style.left = scaled.x + 'px';
+        touchDots[slot].style.top = scaled.y + 'px';
+    }
+    
+    function checkHits() {
+        if (!gameOn || targets.length === 0) return;
+        
+        const rect = gameEl.getBoundingClientRect();
+        
+        Object.values(touches).forEach(touch => {
+            const scaled = scaleTouch(touch.x, touch.y);
+            const rx = scaled.x - rect.left;
+            const ry = scaled.y - rect.top;
+            
+            for (let i = targets.length - 1; i >= 0; i--) {
+                const t = targets[i];
+                const dist = Math.sqrt((rx - t.x - 40) ** 2 + (ry - t.y - 40) ** 2);
+                if (dist < 60) {
+                    hitTarget(t.el);
+                    return;
+                }
+            }
+        });
+    }
+    
+    function connectWS() {
+        ws = new WebSocket('ws://localhost:8765');
+        
+        ws.onopen = function() {
+            console.log('Touch WebSocket connected');
+        };
+        
+        ws.onmessage = function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                
+                if (data.type === 'touch_start') {
+                    const slot = data.slot !== undefined ? data.slot : 0;
+                    touches[slot] = {x: data.x || 0, y: data.y || 0};
+                    createTouchDot(slot, data.x || 0, data.y || 0);
+                }
+                else if (data.type === 'touch_move') {
+                    const slot = data.slot !== undefined ? data.slot : 0;
+                    touches[slot] = {x: data.x, y: data.y};
+                    updateTouchDot(slot, data.x, data.y);
+                    
+                    if (Date.now() - lastCheck > 100) {
+                        checkHits();
+                        lastCheck = Date.now();
+                    }
+                }
+                else if (data.type === 'touch_end') {
+                    const keys = Object.keys(touches);
+                    if (keys.length > 0) {
+                        const removedSlot = keys[0];
+                        if (touchDots[removedSlot]) {
+                            touchDots[removedSlot].remove();
+                            delete touchDots[removedSlot];
+                        }
+                        delete touches[removedSlot];
+                    }
+                }
+            } catch(e) {}
+        };
+        
+        ws.onclose = function() {
+            setTimeout(connectWS, 2000);
+        };
+    }
+    
+    connectWS();
+    
+    // Cleanup on app exit
+    window._gameCleanup = function() {
+        gameOn = false;
+        if (animFrame) cancelAnimationFrame(animFrame);
+        if (ws) ws.close();
+        targets.forEach(t => t.el.remove());
+        Object.values(touchDots).forEach(d => d.remove());
     };
 })();
 </script>

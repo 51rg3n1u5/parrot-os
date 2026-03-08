@@ -29,6 +29,16 @@ ParrotOS.nav = {
         // Stoppa current timeout
         ParrotOS.router.clearTimeout();
         
+        // Cleanup previous app
+        if (typeof window._appCleanup === 'function') {
+            window._appCleanup();
+            delete window._appCleanup;
+        }
+        if (typeof window._gameCleanup === 'function') {
+            window._gameCleanup();
+            delete window._gameCleanup;
+        }
+        
         // Hitta app index
         const index = this.apps.findIndex(app => app.id === appId);
         if (index >= 0) {
