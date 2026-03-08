@@ -38,7 +38,7 @@ ParrotOS.router = {
             // Skapa app container
             const wrapper = document.createElement('div');
             wrapper.id = `app-${appId}`;
-            wrapper.className = 'app-wrapper';
+            wrapper.className = 'app-wrapper active';
             wrapper.innerHTML = appData.html || '';
             
             // Clear container and append new wrapper

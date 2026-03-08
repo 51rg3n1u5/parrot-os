@@ -1,14 +1,23 @@
 <!-- Home App - Startmeny -->
 <div class="app-content" style="padding: 10px;">
     <div class="app-grid" id="app-grid">
-        <!-- Apps will be loaded here dynamically -->
+        <p style="color: #778da9;">Laddar...</p>
     </div>
 </div>
 
 <script>
-// Home app initialization
-(async function() {
+// Home app initialization - wait for apps to be loaded
+function initHome() {
     const grid = document.getElementById('app-grid');
+    
+    // Wait for apps to be loaded
+    if (!ParrotOS.apps || ParrotOS.apps.length === 0) {
+        setTimeout(initHome, 100);
+        return;
+    }
+    
+    // Clear loading text
+    grid.innerHTML = '';
     
     // Get apps list (excluding home itself)
     const apps = ParrotOS.apps.filter(app => app.id !== 'home');
@@ -34,5 +43,8 @@
         empty.innerHTML = `<span class="icon">➕</span>`;
         grid.appendChild(empty);
     }
-})();
+}
+
+// Start initialization
+initHome();
 </script>
