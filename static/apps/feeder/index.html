@@ -1,0 +1,43 @@
+<!-- Feeder App -->
+<div class="app-content">
+    <h1>🌰 Mat</h1>
+    
+    <div class="card">
+        <h3>💊 Pellets</h3>
+        <p>Idag: <span id="today-amount" style="color: #4ecca3; font-size: 24px;">--</span> g</p>
+        <div class="progress-bar" style="margin: 15px 0;">
+            <div class="fill" id="pellet-bar" style="width: 0%;"></div>
+        </div>
+        <p style="font-size: 12px;">Budget: 40g + 10g bonus</p>
+    </div>
+    
+    <div style="display: flex; gap: 15px; margin-top: 20px;">
+        <button class="btn btn-primary" onclick="giveFood(10)">🌰 10g</button>
+        <button class="btn btn-secondary" onclick="giveFood(5)">🌰 5g</button>
+    </div>
+</div>
+
+<script>
+async function updateStatus() {
+    const status = await ParrotOS.feeder.getStatus();
+    if (status.error) return;
+    
+    document.getElementById('today-amount').textContent = status.pelletsToday || 0;
+    
+    const pct = Math.min(100, ((status.pelletsToday || 0) / 40) * 100);
+    document.getElementById('pellet-bar').style.width = pct + '%';
+}
+
+async function giveFood(grams) {
+    const result = await ParrotOS.feeder.dispense(grams);
+    if (result.success) {
+        // Visual feedback
+        await ParrotOS.led.setEffect('excited');
+        setTimeout(() => ParrotOS.led.setEffect('calm'), 1000);
+    }
+    updateStatus();
+}
+
+// Load status on init
+updateStatus();
+</script>

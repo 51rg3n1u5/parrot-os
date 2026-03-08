@@ -1,0 +1,10 @@
+{
+    "id": "game",
+    "name": "Lek",
+    "icon": "🎲",
+    "icon_file": null,
+    "timeout_seconds": 300,
+    "description": "Fånga belöningar",
+    "sort_order": 1,
+    "enabled": true
+}

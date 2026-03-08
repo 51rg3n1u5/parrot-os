@@ -1,0 +1,32 @@
+<!-- Settings App -->
+<div class="app-content">
+    <h1>⚙️ Inställningar</h1>
+    
+    <div class="card">
+        <h3>💡 LED</h3>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px;">
+            <button class="btn btn-secondary" onclick="ParrotOS.led.setEffect('off')">❌ Av</button>
+            <button class="btn btn-secondary" onclick="ParrotOS.led.setEffect('on')">✅ På</button>
+            <button class="btn btn-secondary" onclick="ParrotOS.led.setEffect('rainbow')">🌈 Regnbåge</button>
+            <button class="btn btn-secondary" onclick="ParrotOS.led.setEffect('calm')">💤 Lugnt</button>
+            <button class="btn btn-secondary" onclick="ParrotOS.led.setEffect('party')">🎉 Fest</button>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h3>🎛️ System</h3>
+        <p>ParrotOS v2.0</p>
+        <p style="margin-top: 10px; font-size: 12px; color: #778da9;">
+            Appar: <span id="app-count">--</span>
+        </p>
+    </div>
+    
+    <div class="card">
+        <h3>🔧 Utveckling</h3>
+        <button class="btn btn-secondary" onclick="location.reload()">🔄 Ladda om</button>
+    </div>
+</div>
+
+<script>
+document.getElementById('app-count').textContent = ParrotOS.apps.length;
+</script>

@@ -1,0 +1,38 @@
+<!-- Home App - Startmeny -->
+<div class="app-content" style="padding: 10px;">
+    <div class="app-grid" id="app-grid">
+        <!-- Apps will be loaded here dynamically -->
+    </div>
+</div>
+
+<script>
+// Home app initialization
+(async function() {
+    const grid = document.getElementById('app-grid');
+    
+    // Get apps list (excluding home itself)
+    const apps = ParrotOS.apps.filter(app => app.id !== 'home');
+    
+    // Build grid
+    apps.forEach(app => {
+        const item = document.createElement('div');
+        item.className = 'app-item';
+        item.innerHTML = `
+            <span class="icon">${app.icon || '📱'}</span>
+            <span class="label">${app.name}</span>
+        `;
+        item.onclick = () => ParrotOS.nav.goTo(app.id);
+        grid.appendChild(item);
+    });
+    
+    // Fill empty slots (up to 8)
+    const emptySlots = 8 - apps.length;
+    for (let i = 0; i < emptySlots; i++) {
+        const empty = document.createElement('div');
+        empty.className = 'app-item';
+        empty.style.opacity = '0.3';
+        empty.innerHTML = `<span class="icon">➕</span>`;
+        grid.appendChild(empty);
+    }
+})();
+</script>

@@ -1,0 +1,33 @@
+<!-- Game App -->
+<div class="app-content">
+    <h1>🎲 Lek</h1>
+    <p style="margin: 20px 0;">Fånga belöningar!</p>
+    
+    <div id="game-area" style="position: relative; width: 300px; height: 400px; background: #0d1b2a; border-radius: 12px; margin: 20px auto;">
+        <!-- Game elements will be added here -->
+    </div>
+    
+    <p style="color: #778da9;">Tryck på sakerna som dyker upp!</p>
+</div>
+
+<script>
+(function() {
+    const area = document.getElementById('game-area');
+    let score = 0;
+    let gameActive = false;
+    let targets = [];
+    
+    // Simplified game - just a placeholder for now
+    area.innerHTML = `
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
+            <span style="font-size: 60px;">🎮</span>
+            <p style="margin-top: 20px;">Spelet kommer snart!</p>
+            <button class="btn btn-primary" style="margin-top: 20px;" onclick="startDemo()">Test</button>
+        </div>
+    `;
+    
+    window.startDemo = function() {
+        alert('Game demo: ' + ParrotOS.feeder.dispense(5));
+    };
+})();
+</script>

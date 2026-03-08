@@ -1,0 +1,54 @@
+<!-- Camera App -->
+<div class="app-content">
+    <h1>📷 Kamera</h1>
+    
+    <div class="card">
+        <video id="camera-stream" autoplay playsinline style="
+            width: 100%; 
+            max-width: 400px; 
+            border-radius: 8px;
+            background: #000;
+        "></video>
+        
+        <p id="camera-status" style="margin-top: 10px; color: #778da9;">
+            Klickar på Starta för att aktivera kameran
+        </p>
+        
+        <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <button class="btn btn-primary" onclick="startCamera()">▶ Starta</button>
+            <button class="btn btn-secondary" onclick="stopCamera()">⏹ Stoppa</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let stream = null;
+
+async function startCamera() {
+    try {
+        const video = document.getElementById('camera-stream');
+        stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: 'user' } 
+        });
+        video.srcObject = stream;
+        document.getElementById('camera-status').textContent = 'Kamera aktiv';
+        document.getElementById('camera-status').style.color = '#2ecc71';
+    } catch (e) {
+        document.getElementById('camera-status').textContent = 'Fel: ' + e.message;
+        document.getElementById('camera-status').style.color = '#e94560';
+    }
+}
+
+function stopCamera() {
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+    }
+    document.getElementById('camera-stream').srcObject = null;
+    document.getElementById('camera-status').textContent = 'Kamera avstängd';
+    document.getElementById('camera-status').style.color = '#778da9';
+}
+
+// Cleanup on app exit
+window.addEventListener('beforeunload', stopCamera);
+</script>

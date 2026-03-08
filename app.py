@@ -8,6 +8,8 @@ from fastapi.responses import FileResponse, JSONResponse
 from contextlib import asynccontextmanager
 import logging
 import os
+import json
+from pathlib import Path
 from datetime import datetime
 
 logging.basicConfig(level=logging.INFO)
@@ -24,6 +26,9 @@ app_state = {
     "calm_cooldown_seconds": 120,
 }
 
+# Path to static apps
+APPS_DIR = Path("static/apps")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("ParrotOS starting up...")
@@ -39,7 +44,64 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 async def root():
     return FileResponse("static/index.html")
 
-# --- API Endpoints ---
+# --- App Framework API ---
+
+@app.get("/api/apps")
+async def get_apps():
+    """Get list of all available apps"""
+    apps = []
+    
+    if not APPS_DIR.exists():
+        return apps
+    
+    for app_folder in APPS_DIR.iterdir():
+        if app_folder.is_dir():
+            manifest_file = app_folder / "manifest.json"
+            if manifest_file.exists():
+                try:
+                    with open(manifest_file) as f:
+                        manifest = json.load(f)
+                        apps.append(manifest)
+                except:
+                    pass
+    
+    # Sort by sort_order
+    apps.sort(key=lambda x: x.get('sort_order', 999))
+    return apps
+
+@app.get("/api/app/{app_id}")
+async def get_app(app_id: str):
+    """Get app content by ID"""
+    app_path = APPS_DIR / app_id
+    
+    if not app_path.exists():
+        raise HTTPException(404, "App not found")
+    
+    # Load manifest
+    manifest_file = app_path / "manifest.json"
+    if not manifest_file.exists():
+        raise HTTPException(404, "App manifest not found")
+    
+    with open(manifest_file) as f:
+        manifest = json.load(f)
+    
+    # Load HTML content
+    html_content = ""
+    index_file = app_path / "index.html"
+    if index_file.exists():
+        with open(index_file) as f:
+            html_content = f.read()
+    
+    return {
+        "id": manifest.get("id"),
+        "name": manifest.get("name"),
+        "icon": manifest.get("icon"),
+        "timeout_seconds": manifest.get("timeout_seconds", 60),
+        "description": manifest.get("description", ""),
+        "html": html_content
+    }
+
+# --- Existing API Endpoints ---
 
 @app.get("/api/state")
 async def get_state():
@@ -83,6 +145,26 @@ async def wled_effect(effect: str):
     # TODO: Actual WLED control
     logger.info(f"WLED effect: {effect}")
     return {"effect": effect}
+
+@app.get("/api/config")
+async def get_config():
+    """Get system configuration"""
+    return {
+        "led_ip": "192.168.1.100",
+        "feeder_enabled": True,
+        "camera_enabled": True,
+        "pellet_budget": 40,
+        "bonus_max": 10
+    }
+
+@app.get("/api/camera/status")
+async def camera_status():
+    """Get camera status"""
+    return {
+        "motion_detected": False,
+        "sound_detected": False,
+        "connected": True
+    }
 
 if __name__ == "__main__":
     import uvicorn

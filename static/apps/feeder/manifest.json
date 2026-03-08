@@ -1,0 +1,10 @@
+{
+    "id": "feeder",
+    "name": "Mat",
+    "icon": "🌰",
+    "icon_file": null,
+    "timeout_seconds": 60,
+    "description": "Ge pellets",
+    "sort_order": 3,
+    "enabled": true
+}

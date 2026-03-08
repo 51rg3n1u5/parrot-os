@@ -1,0 +1,31 @@
+<!-- Calm App -->
+<div class="app-content">
+    <h1>💤 Lugnt</h1>
+    
+    <div class="breath-circle" style="
+        width: 150px; 
+        height: 150px; 
+        border-radius: 50%; 
+        background: radial-gradient(#415a77, #1b263b); 
+        margin: 30px auto;
+        animation: breathe 4s ease-in-out infinite;
+    "></div>
+    
+    <p style="color: #778da9; font-size: 18px; margin-top: 20px;">Andas in... andas ut...</p>
+    
+    <div style="margin-top: 30px; display: flex; gap: 10px;">
+        <button class="btn btn-secondary" onclick="ParrotOS.led.setEffect('calm')">💡 Lugnt ljus</button>
+    </div>
+</div>
+
+<style>
+@keyframes breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+}
+</style>
+
+<script>
+// Set calm LED when entering
+ParrotOS.led.setEffect('calm');
+</script>
