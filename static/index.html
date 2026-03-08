@@ -18,12 +18,12 @@
         
         /* Navigation Bar */
         #nav-bar {
-            height: 60px;
+            height: 120px;
             background: #16213e;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 10px;
+            padding: 0 20px;
             border-bottom: 2px solid #0f3460;
             user-select: none;
         }
@@ -31,12 +31,12 @@
         #nav-bar button {
             background: none;
             border: none;
-            font-size: 24px;
+            font-size: 36px;
             color: #4ecca3;
             cursor: pointer;
-            padding: 10px 15px;
+            padding: 15px 20px;
             border-radius: 8px;
-            min-width: 50px;
+            min-width: 70px;
         }
         
         #nav-bar button:active {
@@ -44,26 +44,17 @@
         }
         
         #nav-bar .title {
-            font-size: 16px;
+            font-size: 28px;
             color: #eee;
             font-weight: bold;
             text-align: center;
             flex: 1;
-        }
-        
-        #nav-bar .home-btn {
-            font-size: 22px;
-        }
-        
-        #nav-bar .nav-group {
-            display: flex;
-            align-items: center;
-            gap: 5px;
+            cursor: pointer;
         }
         
         /* App Content Area */
         #app-container {
-            height: calc(100% - 60px);
+            height: calc(100% - 120px);
             overflow: hidden;
             position: relative;
         }
@@ -107,16 +98,11 @@
 <body>
     <!-- Navigation Bar -->
     <div id="nav-bar">
-        <div class="nav-group">
-            <button id="prev-btn" onclick="ParrotOS.nav.prev()">◄</button>
-        </div>
+        <button id="prev-btn" onclick="ParrotOS.nav.prev()">◄</button>
         
         <span class="title" id="app-title" onclick="ParrotOS.nav.home()">🏠 Hem</span>
         
-        <div class="nav-group">
-            <button id="next-btn" onclick="ParrotOS.nav.next()">►</button>
-            <button class="home-btn" onclick="ParrotOS.nav.home()">🏠</button>
-        </div>
+        <button id="next-btn" onclick="ParrotOS.nav.next()">►</button>
     </div>
     
     <!-- Dynamic App Content -->
